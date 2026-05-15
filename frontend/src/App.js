@@ -4,6 +4,10 @@ import axios from "axios";
 const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
+const calcPaystackFee = (amount) => {
+  const fee = (amount * 0.015) + 0.50;
+  return Math.min(parseFloat(fee.toFixed(2)), 2.00);
+};
 
 // ── Google Fonts ──────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
@@ -292,13 +296,11 @@ function AdminLogin({ onLogin }) {
       display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
       fontFamily: "'DM Sans', sans-serif",
     }}>
-      {/* Background pattern */}
       <div style={{
         position: "fixed", inset: 0, opacity: 0.04,
         backgroundImage: "radial-gradient(#7C3AED 1px, transparent 1px)",
         backgroundSize: "32px 32px", pointerEvents: "none",
       }} />
-
       <div style={{
         background: "#161222", borderRadius: 20,
         padding: "40px 36px", width: "100%", maxWidth: 400,
@@ -307,7 +309,6 @@ function AdminLogin({ onLogin }) {
         animation: "fadeUp .4s ease",
         position: "relative", zIndex: 1,
       }}>
-        {/* Logo */}
         <div style={{ marginBottom: 32 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 14,
@@ -345,7 +346,6 @@ function AdminLogin({ onLogin }) {
           border: "none", borderRadius: 10, color: "#fff",
           fontSize: 15, fontWeight: 600, cursor: loading ? "default" : "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          transition: "opacity .2s",
         }}>
           {loading ? (
             <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
@@ -365,6 +365,9 @@ function BuyModal({ bundle, onClose, dm }) {
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
   const palette = dm ? dark : light;
+
+  const paystackFee  = calcPaystackFee(bundle.price);
+  const totalAmount  = parseFloat((bundle.price + paystackFee).toFixed(2));
 
   const handleBuy = async () => {
     if (!recipientPhone || !payerEmail) { setError("Please fill in all fields."); return; }
@@ -391,7 +394,7 @@ function BuyModal({ bundle, onClose, dm }) {
         border: `1px solid ${palette.border}`, boxShadow: palette.shadowMd,
         maxHeight: "90vh", overflowY: "auto", animation: "fadeUp .25s ease",
       }}>
-        {/* Bundle header strip */}
+        {/* Bundle header */}
         <div style={{
           padding: "24px 24px 20px",
           borderBottom: `1px solid ${palette.border}`,
@@ -402,10 +405,9 @@ function BuyModal({ bundle, onClose, dm }) {
             <div style={{ fontSize: 36, fontWeight: 700, color: palette.text, letterSpacing: "-0.03em", marginTop: 8, lineHeight: 1 }}>
               {bundle.data}
             </div>
-            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6, display: "flex", gap: 12 }}>
-              <span>Valid {bundle.validity}</span>
-              <span>·</span>
-              <span>Expires in {bundle.expiry || "90 days"}</span>
+            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+              {Icon.clock(palette.muted, 12)}
+              <span>{bundle.validity || "No expiry"}</span>
             </div>
           </div>
           <div style={{ fontSize: 22, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
@@ -414,12 +416,26 @@ function BuyModal({ bundle, onClose, dm }) {
         </div>
 
         <div style={{ padding: "20px 24px" }}>
-          {/* Recipient */}
-          <div style={{ fontSize: 13, fontWeight: 600, color: palette.muted, marginBottom: 8, letterSpacing: "0.02em", textTransform: "uppercase" }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: palette.muted, marginBottom: 12, letterSpacing: "0.02em", textTransform: "uppercase" }}>
             Recipient details
           </div>
-          <InputField icon={Icon.phone(palette.muted, 16)} type="tel" placeholder="Recipient phone number" value={recipientPhone} onChange={e => setRecipient(e.target.value)} dm={dm} />
-          <InputField icon={Icon.mail(palette.muted, 16)} type="email" placeholder="Email address for receipt" value={payerEmail} onChange={e => setEmail(e.target.value)} dm={dm} />
+
+          <InputField
+            icon={Icon.phone(palette.muted, 16)}
+            type="tel"
+            placeholder="Recipient phone number"
+            value={recipientPhone}
+            onChange={e => setRecipient(e.target.value)}
+            dm={dm}
+          />
+          <InputField
+            icon={Icon.mail(palette.muted, 16)}
+            type="email"
+            placeholder="Email address for receipt"
+            value={payerEmail}
+            onChange={e => setEmail(e.target.value)}
+            dm={dm}
+          />
 
           {error && (
             <div style={{
@@ -433,28 +449,34 @@ function BuyModal({ bundle, onClose, dm }) {
             </div>
           )}
 
-          {/* Summary */}
+          {/* Payment summary */}
           <div style={{
             background: palette.subtle, borderRadius: 12,
             padding: "14px 16px", marginBottom: 20,
             border: `1px solid ${palette.border}`,
           }}>
             {[
-              ["Bundle", `${bundle.data} · ${bundle.validity}`],
-              ["Network", bundle.network === "mtn" ? "MTN Mobile Money" : "Telecel Cash"],
-              ["Expires in", bundle.expiry || "90 days"],
+              ["Bundle",          `${bundle.data}`],
+              ["Network",         bundle.network === "mtn" ? "MTN" : "Telecel"],
+              ["Bundle price",    gh(bundle.price)],
+              ["Processing fee",  `+ ${gh(paystackFee)}`],
             ].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
                 <span style={{ color: palette.muted }}>{k}</span>
                 <span style={{ fontWeight: 600, color: palette.text }}>{v}</span>
               </div>
             ))}
-            <div style={{ borderTop: `1px solid ${palette.border}`, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{
+              borderTop: `1px solid ${palette.border}`, paddingTop: 10,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
               <span style={{ fontSize: 13, color: palette.muted }}>Total</span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>{gh(bundle.price)}</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
+                {gh(totalAmount)}
+              </span>
             </div>
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: palette.muted }}>
-              {Icon.shield(palette.muted, 12)} Secured by Paystack
+              {Icon.shield(palette.muted, 12)} Secured by Paystack · No expiry on bundle
             </div>
           </div>
 
@@ -472,12 +494,11 @@ function BuyModal({ bundle, onClose, dm }) {
               border: "none", borderRadius: 10, color: "#fff",
               fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              transition: "opacity .2s",
             }}>
               {loading ? (
                 <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
               ) : (
-                <>{Icon.arrow("#fff", 16)} Pay {gh(bundle.price)}</>
+                <>{Icon.arrow("#fff", 16)} Pay {gh(totalAmount)}</>
               )}
             </button>
           </div>
@@ -512,26 +533,25 @@ function PaymentCallback() {
   const isFailed  = ["failed", "error"].includes(status);
   const isPending = ["pending", "checking"].includes(status);
 
-  const statusConfig = {
-    icon: isSuccess
-      ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#F0FDF4", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.check("#16A34A", 28)}</div>
-      : isFailed
-        ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#FEF2F2", border: "1px solid #FECACA", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.x("#DC2626", 28)}</div>
-        : <div style={{ width: 64, height: 64, borderRadius: "50%", background: T.violetLight, border: `1px solid ${T.violet}30`, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: 28, height: 28, border: `3px solid ${T.violet}30`, borderTopColor: T.violet, borderRadius: "50%", display: "inline-block", animation: "spin .8s linear infinite" }} /></div>,
-    title: isSuccess ? "Payment confirmed" : isFailed ? "Payment failed" : "Processing payment",
-    message: isSuccess
-      ? "Your data bundle has been delivered successfully."
-      : isFailed
-        ? "Your payment was not completed. No charge was made."
-        : "Please wait while we confirm your payment…",
-  };
+  const iconEl = isSuccess
+    ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#F0FDF4", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.check("#16A34A", 28)}</div>
+    : isFailed
+      ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#FEF2F2", border: "1px solid #FECACA", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.x("#DC2626", 28)}</div>
+      : <div style={{ width: 64, height: 64, borderRadius: "50%", background: T.violetLight, border: `1px solid ${T.violet}30`, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: 28, height: 28, border: `3px solid ${T.violet}30`, borderTopColor: T.violet, borderRadius: "50%", display: "inline-block", animation: "spin .8s linear infinite" }} /></div>;
+
+  const title   = isSuccess ? "Payment confirmed" : isFailed ? "Payment failed" : "Processing payment";
+  const message = isSuccess
+    ? "Your data bundle has been delivered successfully."
+    : isFailed
+      ? "Your payment was not completed. No charge was made."
+      : "Please wait while we confirm your payment…";
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ background: "#fff", borderRadius: 20, padding: "40px 36px", width: "100%", maxWidth: 400, border: "1px solid #E5E7EB", boxShadow: "0 8px 40px rgba(0,0,0,0.08)", textAlign: "center", animation: "fadeUp .4s ease" }}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>{statusConfig.icon}</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 8 }}>{statusConfig.title}</div>
-        <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 24 }}>{statusConfig.message}</div>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>{iconEl}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 8 }}>{title}</div>
+        <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 24 }}>{message}</div>
         {reference && (
           <div style={{ background: "#F8F7FF", border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 16px", fontSize: 12, color: "#6B7280", marginBottom: 24, fontFamily: "'DM Mono', monospace" }}>
             Ref: {reference}
@@ -576,7 +596,7 @@ function StoreView({ onBuy, dm }) {
         <div style={{ position: "absolute", bottom: -60, right: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.03)", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.12)", borderRadius: 20, padding: "4px 12px", fontSize: 12, color: "rgba(255,255,255,0.8)", marginBottom: 16, fontWeight: 500 }}>
-            {Icon.shield("rgba(255,255,255,0.8)", 12)} Secured payments
+            {Icon.shield("rgba(255,255,255,0.8)", 12)} Secured payments · No expiry bundles
           </div>
           <div style={{ fontSize: 30, fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", lineHeight: 1.2, marginBottom: 10 }}>
             Data bundles,<br />delivered instantly.
@@ -590,8 +610,8 @@ function StoreView({ onBuy, dm }) {
       {/* Filter tabs */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, background: palette.surface, borderRadius: 12, padding: 4, border: `1px solid ${palette.border}`, width: "fit-content" }}>
         {[
-          { key: "all", label: "All networks" },
-          { key: "mtn", label: "MTN" },
+          { key: "all",     label: "All networks" },
+          { key: "mtn",     label: "MTN" },
           { key: "telecel", label: "Telecel" },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)} style={{
@@ -607,7 +627,6 @@ function StoreView({ onBuy, dm }) {
         ))}
       </div>
 
-      {/* Section label */}
       <div style={{ fontSize: 12, fontWeight: 600, color: palette.muted, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 }}>
         {visible.length} bundle{visible.length !== 1 ? "s" : ""} available
       </div>
@@ -618,48 +637,44 @@ function StoreView({ onBuy, dm }) {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))", gap: 12 }}>
-          {visible.map((b, i) => {
-            return (
-              <div key={b.id} className="bundle-card" style={{
-                background: palette.surface, borderRadius: 16, padding: "20px 18px",
-                border: `1px solid ${palette.border}`, boxShadow: palette.shadow,
-                display: "flex", flexDirection: "column",
-                animation: `fadeUp .4s ease ${i * 0.05}s both`,
-              }}>
-                <div style={{ marginBottom: 14 }}>
-                  <Badge network={b.network} />
-                </div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: palette.text, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>
-                  {b.data}
-                </div>
-                <div style={{ fontSize: 12, color: palette.muted, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                  {Icon.clock(palette.muted, 12)} {b.validity}
-                </div>
-                <div style={{ fontSize: 11, color: palette.muted, marginBottom: 16, opacity: 0.7 }}>
-                  Exp. {b.expiry || "90 days"}
-                </div>
-                <div style={{ marginTop: "auto" }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em", marginBottom: 12 }}>
-                    {gh(b.price)}
-                  </div>
-                  <button onClick={() => onBuy(b)} style={{
-                    width: "100%", padding: "10px 0",
-                    background: "linear-gradient(135deg, #5B21B6, #7C3AED)",
-                    border: "none", borderRadius: 9, color: "#fff",
-                    fontSize: 13, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    boxShadow: "0 2px 8px rgba(91,33,182,0.3)",
-                    transition: "opacity .15s",
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                  >
-                    {Icon.arrow("#fff", 14)} Buy now
-                  </button>
-                </div>
+          {visible.map((b, i) => (
+            <div key={b.id} className="bundle-card" style={{
+              background: palette.surface, borderRadius: 16, padding: "20px 18px",
+              border: `1px solid ${palette.border}`, boxShadow: palette.shadow,
+              display: "flex", flexDirection: "column",
+              animation: `fadeUp .4s ease ${i * 0.05}s both`,
+            }}>
+              <div style={{ marginBottom: 14 }}>
+                <Badge network={b.network} />
               </div>
-            );
-          })}
+              <div style={{ fontSize: 32, fontWeight: 700, color: palette.text, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>
+                {b.data}
+              </div>
+              <div style={{ fontSize: 12, color: palette.muted, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                {Icon.clock(palette.muted, 12)}
+                <span>{b.validity || "No expiry"}</span>
+              </div>
+              <div style={{ marginTop: "auto", paddingTop: 14 }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em", marginBottom: 12 }}>
+                  {gh(b.price)}
+                </div>
+                <button onClick={() => onBuy(b)} style={{
+                  width: "100%", padding: "10px 0",
+                  background: "linear-gradient(135deg, #5B21B6, #7C3AED)",
+                  border: "none", borderRadius: 9, color: "#fff",
+                  fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  boxShadow: "0 2px 8px rgba(91,33,182,0.3)",
+                  transition: "opacity .15s",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                >
+                  {Icon.arrow("#fff", 14)} Buy now
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -670,7 +685,7 @@ function StoreView({ onBuy, dm }) {
 function AdminView({ showToast, adminCreds, onLogout, dm }) {
   const [bundles, setBundles] = useState([]);
   const [orders, setOrders]   = useState([]);
-  const [form, setForm]       = useState({ network: "telecel", data: "", validity: "", price: "", expiry: "90 days" });
+  const [form, setForm]       = useState({ network: "telecel", data: "", validity: "No expiry", price: "" });
   const palette = dm ? dark : light;
 
   const authHeaders = { username: adminCreds.username, password: adminCreds.password };
@@ -683,9 +698,9 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
   useEffect(() => { loadAll(); }, [loadAll]);
 
   const addBundle = async () => {
-    if (!form.data || !form.validity || !form.price) return;
+    if (!form.data || !form.price) return;
     await axios.post(`${API}/api/bundles`, { ...form, price: Number(form.price) }, { headers: authHeaders });
-    setForm({ network: "telecel", data: "", validity: "", price: "", expiry: "90 days" });
+    setForm({ network: "telecel", data: "", validity: "No expiry", price: "" });
     loadAll(); showToast("Bundle added");
   };
 
@@ -694,12 +709,26 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
     loadAll(); showToast("Bundle removed");
   };
 
-  const revenue = orders.filter(o => o.status === "delivered").reduce((s, o) => s + (o.bundle?.price || 0), 0);
+  const revenue = orders
+    .filter(o => o.status === "delivered")
+    .reduce((s, o) => s + (o.bundle?.price || 0), 0);
 
-  const cardStyle = { background: palette.surface, borderRadius: 16, border: `1px solid ${palette.border}`, padding: "20px 24px", marginBottom: 16, boxShadow: palette.shadow };
-  const thS = { textAlign: "left", fontSize: 11, fontWeight: 600, color: palette.muted, padding: "0 14px 12px", borderBottom: `1px solid ${palette.border}`, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" };
-  const tdS = { padding: "13px 14px", borderBottom: `1px solid ${palette.border}`, color: palette.text, fontSize: 13 };
-  const fi = { ...tdS, fontFamily: "'DM Mono', monospace", fontSize: 11, color: palette.muted };
+  const cardStyle = {
+    background: palette.surface, borderRadius: 16,
+    border: `1px solid ${palette.border}`, padding: "20px 24px",
+    marginBottom: 16, boxShadow: palette.shadow,
+  };
+
+  const thS = {
+    textAlign: "left", fontSize: 11, fontWeight: 600, color: palette.muted,
+    padding: "0 14px 12px", borderBottom: `1px solid ${palette.border}`,
+    textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
+  };
+
+  const tdS = {
+    padding: "13px 14px", borderBottom: `1px solid ${palette.border}`,
+    color: palette.text, fontSize: 13,
+  };
 
   const inputS = {
     width: "100%", padding: "10px 12px", fontSize: 13,
@@ -708,9 +737,9 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
   };
 
   const stats = [
-    { label: "Total orders",   value: orders.length,                                       icon: Icon.orders(T.violet, 20) },
-    { label: "Revenue",        value: gh(revenue),                                         icon: Icon.revenue(T.violet, 20) },
-    { label: "Active bundles", value: bundles.length,                                      icon: Icon.box(T.violet, 20) },
+    { label: "Total orders",   value: orders.length,                                       icon: Icon.orders(T.violet, 20)    },
+    { label: "Revenue",        value: gh(revenue),                                         icon: Icon.revenue(T.violet, 20)   },
+    { label: "Active bundles", value: bundles.length,                                      icon: Icon.box(T.violet, 20)       },
     { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length, icon: Icon.delivered(T.violet, 20) },
   ];
 
@@ -727,7 +756,6 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
           padding: "9px 16px", border: `1.5px solid ${palette.border}`,
           borderRadius: 9, background: "transparent", color: palette.muted,
           fontSize: 13, fontWeight: 600, cursor: "pointer",
-          transition: "all .15s",
         }}>
           {Icon.logout(palette.muted, 16)} Sign out
         </button>
@@ -737,8 +765,8 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
         {stats.map(({ label, value, icon }, i) => (
           <div key={label} style={{ ...cardStyle, marginBottom: 0, animation: `fadeUp .4s ease ${i * 0.07}s both` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: T.violetLight, display: "flex", alignItems: "center", justifyContent: "center" }}>{icon}</div>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: T.violetLight, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+              {icon}
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: palette.text, letterSpacing: "-0.02em" }}>{value}</div>
             <div style={{ fontSize: 12, color: palette.muted, marginTop: 3 }}>{label}</div>
@@ -756,40 +784,37 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
             <option value="telecel">Telecel</option>
             <option value="mtn">MTN</option>
           </select>
-          {[
-            ["data",     "Data e.g. 2GB",     "text"],
-            ["validity", "Validity e.g. 7 days", "text"],
-            ["expiry",   "Expiry e.g. 90 days",  "text"],
-            ["price",    "Price (GH₵)",          "number"],
-          ].map(([key, ph, type]) => (
-            <input key={key} type={type} placeholder={ph} value={form[key]}
-              onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-              style={inputS} />
-          ))}
+          <input placeholder="Data e.g. 5GB" value={form.data}
+            onChange={e => setForm(f => ({ ...f, data: e.target.value }))} style={inputS} />
+          <input placeholder="Validity" value={form.validity}
+            onChange={e => setForm(f => ({ ...f, validity: e.target.value }))} style={inputS} />
+          <input type="number" placeholder="Your price (GH₵)" value={form.price}
+            onChange={e => setForm(f => ({ ...f, price: e.target.value }))} style={inputS} />
           <button onClick={addBundle} style={{
             padding: "10px 0", background: "linear-gradient(135deg, #5B21B6, #7C3AED)",
             border: "none", borderRadius: 8, color: "#fff", fontSize: 13,
-            fontWeight: 600, cursor: "pointer", display: "flex",
-            alignItems: "center", justifyContent: "center", gap: 6,
+            fontWeight: 600, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           }}>
             {Icon.plus("#fff", 14)} Add bundle
           </button>
         </div>
       </div>
 
-      {/* Bundles */}
+      {/* Bundles table */}
       <div style={cardStyle}>
         <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 16 }}>Bundles</div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Network","Data","Validity","Expiry","Price",""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>{["Network","Data","Validity","Your price",""].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+            </thead>
             <tbody>
               {bundles.map(b => (
                 <tr key={b.id}>
                   <td style={tdS}><Badge network={b.network} /></td>
                   <td style={{ ...tdS, fontWeight: 600 }}>{b.data}</td>
-                  <td style={tdS}>{b.validity}</td>
-                  <td style={tdS}>{b.expiry || "90 days"}</td>
+                  <td style={tdS}>{b.validity || "No expiry"}</td>
                   <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(b.price)}</td>
                   <td style={tdS}>
                     <button onClick={() => removeBundle(b.id)} style={{
@@ -810,21 +835,30 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
         </div>
       </div>
 
-      {/* Orders */}
+      {/* Orders table */}
       <div style={cardStyle}>
         <div style={{ fontSize: 15, fontWeight: 600, color: palette.text, marginBottom: 16 }}>Recent orders</div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead><tr>{["Reference","Bundle","Recipient","Amount","Status"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+            <thead>
+              <tr>{["Reference","Bundle","Recipient","Bundle price","Fee","Total","Status"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+            </thead>
             <tbody>
               {orders.length === 0 ? (
-                <tr><td colSpan={5} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
+                <tr><td colSpan={7} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
               ) : orders.map(o => (
                 <tr key={o.reference}>
-                  <td style={fi}>{o.reference}</td>
-                  <td style={tdS}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><Badge network={o.bundle?.network} /><span style={{ fontWeight: 600 }}>{o.bundle?.data}</span></div></td>
+                  <td style={{ ...tdS, fontFamily: "'DM Mono', monospace", fontSize: 11, color: palette.muted }}>{o.reference}</td>
+                  <td style={tdS}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Badge network={o.bundle?.network} />
+                      <span style={{ fontWeight: 600 }}>{o.bundle?.data}</span>
+                    </div>
+                  </td>
                   <td style={tdS}>{o.recipientPhone}</td>
-                  <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.bundle?.price || 0)}</td>
+                  <td style={{ ...tdS, color: T.violet, fontWeight: 600 }}>{gh(o.bundle?.price || 0)}</td>
+                  <td style={{ ...tdS, color: palette.muted }}>{gh(o.paystackFee || 0)}</td>
+                  <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.totalAmount || 0)}</td>
                   <td style={tdS}><StatusBadge status={o.status} /></td>
                 </tr>
               ))}
@@ -866,19 +900,19 @@ export default function App() {
         position: "sticky", top: 0, zIndex: 100,
         backdropFilter: "blur(12px)",
       }}>
-        {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 9, background: "linear-gradient(135deg, #5B21B6, #7C3AED)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {Icon.wifi("#fff", 16)}
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: palette.text, letterSpacing: "-0.02em" }}>DataFlow GH</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: palette.text, letterSpacing: "-0.02em" }}>
+            DataFlow GH
+          </span>
         </div>
 
-        {/* Nav links */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {[
-            { key: "store", label: "Store",     icon: Icon.store },
-            { key: "admin", label: "Dashboard", icon: Icon.dashboard },
+            { key: "store",   label: "Store",     icon: Icon.store },
+            { key: "admin",   label: "Dashboard", icon: Icon.dashboard },
           ].map(({ key, label, icon }) => (
             <button key={key} className="nav-link" onClick={key === "admin" ? handleAdminTabClick : () => setTab(key)} style={{
               display: "flex", alignItems: "center", gap: 7,
@@ -891,13 +925,12 @@ export default function App() {
             </button>
           ))}
 
-          {/* Dark mode */}
           <button onClick={() => setDm(d => !d)} style={{
             width: 36, height: 36, borderRadius: 9,
             border: `1px solid ${palette.border}`,
             background: palette.subtle, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: palette.muted, marginLeft: 4, transition: "all .2s",
+            color: palette.muted, marginLeft: 4,
           }}>
             {dm ? Icon.sun(palette.muted, 16) : Icon.moon(palette.muted, 16)}
           </button>
@@ -907,20 +940,25 @@ export default function App() {
       {/* Content */}
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
         {tab === "store" && <StoreView onBuy={setBuyBundle} dm={dm} />}
-        {tab === "admin" && adminCreds && <AdminView showToast={showToast} adminCreds={adminCreds} onLogout={handleLogout} dm={dm} />}
+        {tab === "admin" && adminCreds && (
+          <AdminView showToast={showToast} adminCreds={adminCreds} onLogout={handleLogout} dm={dm} />
+        )}
       </div>
 
       {buyBundle && <BuyModal bundle={buyBundle} onClose={() => setBuyBundle(null)} dm={dm} />}
 
       {/* WhatsApp FAB */}
-      <button className="wa-btn" onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=Hello!%20I%20need%20help%20with%20a%20data%20bundle.`, "_blank")} style={{
-        position: "fixed", bottom: 24, right: 24, zIndex: 9998,
-        width: 52, height: 52, borderRadius: "50%",
-        background: "#25D366", border: "none", cursor: "pointer",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 4px 20px rgba(37,211,102,0.45)",
-        transition: "transform .2s ease, box-shadow .2s ease",
-      }}
+      <button
+        className="wa-btn"
+        onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=Hello!%20I%20need%20help%20with%20a%20data%20bundle.`, "_blank")}
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 9998,
+          width: 52, height: 52, borderRadius: "50%",
+          background: "#25D366", border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 20px rgba(37,211,102,0.45)",
+          transition: "transform .2s ease, box-shadow .2s ease",
+        }}
         onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 28px rgba(37,211,102,0.65)"}
         onMouseLeave={e => e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,211,102,0.45)"}
         title="Chat on WhatsApp"

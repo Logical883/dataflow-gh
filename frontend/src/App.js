@@ -4,10 +4,6 @@ import axios from "axios";
 const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
-const calcPaystackFee = (amount) => {
-  const fee = (amount * 0.015) + 0.50;
-  return Math.min(parseFloat(fee.toFixed(2)), 2.00);
-};
 
 // ── Google Fonts ──────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
@@ -24,7 +20,6 @@ globalStyle.textContent = `
   input:focus { border-color: #5B21B6 !important; box-shadow: 0 0 0 3px rgba(91,33,182,0.1) !important; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .bundle-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
   .bundle-card:hover { transform: translateY(-3px); }
   .wa-btn:hover { transform: scale(1.08) !important; }
@@ -38,7 +33,6 @@ const T = {
   violet:     "#5B21B6",
   violetMid:  "#7C3AED",
   violetLight:"#EDE9FE",
-  violetGlow: "rgba(91,33,182,0.15)",
   mtn:   { bg: "#FFFBEB", text: "#92400E", dot: "#D97706", border: "#FDE68A" },
   tel:   { bg: "#FEF2F2", text: "#991B1B", dot: "#DC2626", border: "#FECACA" },
 };
@@ -172,7 +166,7 @@ const Icon = {
       <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
     </svg>
   ),
-  delivered: (c="currentColor",s=22) => (
+  deliveredIcon: (c="currentColor",s=22) => (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
     </svg>
@@ -264,7 +258,7 @@ function Toast({ msg, type, onDone }) {
       color: isErr ? "#FCA5A5" : "#86EFAC",
       padding: "12px 20px", borderRadius: 12, fontSize: 14, fontWeight: 500,
       boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
-      animation: "fadeUp .3s ease",
+      animation: "fadeUp .3s ease", whiteSpace: "nowrap",
     }}>
       {isErr ? Icon.x("#FCA5A5", 16) : Icon.check("#86EFAC", 16)}
       {msg}
@@ -306,8 +300,7 @@ function AdminLogin({ onLogin }) {
         padding: "40px 36px", width: "100%", maxWidth: 400,
         border: "1px solid #2A2440",
         boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
-        animation: "fadeUp .4s ease",
-        position: "relative", zIndex: 1,
+        animation: "fadeUp .4s ease", position: "relative", zIndex: 1,
       }}>
         <div style={{ marginBottom: 32 }}>
           <div style={{
@@ -321,9 +314,7 @@ function AdminLogin({ onLogin }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: "#F3F0FF", letterSpacing: "-0.02em" }}>
             Sign in to DataFlow
           </div>
-          <div style={{ fontSize: 14, color: "#8B83A8", marginTop: 6 }}>
-            Admin access only
-          </div>
+          <div style={{ fontSize: 14, color: "#8B83A8", marginTop: 6 }}>Admin access only</div>
         </div>
 
         <InputField icon={Icon.user("#8B83A8", 16)} placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} dm={true} />
@@ -347,11 +338,10 @@ function AdminLogin({ onLogin }) {
           fontSize: 15, fontWeight: 600, cursor: loading ? "default" : "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
         }}>
-          {loading ? (
-            <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
-          ) : (
-            <>{Icon.arrow("#fff", 16)} Sign in</>
-          )}
+          {loading
+            ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+            : <>{Icon.arrow("#fff", 16)} Sign in</>
+          }
         </button>
       </div>
     </div>
@@ -365,9 +355,6 @@ function BuyModal({ bundle, onClose, dm }) {
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
   const palette = dm ? dark : light;
-
-  const paystackFee  = calcPaystackFee(bundle.price);
-  const totalAmount  = parseFloat((bundle.price + paystackFee).toFixed(2));
 
   const handleBuy = async () => {
     if (!recipientPhone || !payerEmail) { setError("Please fill in all fields."); return; }
@@ -405,7 +392,7 @@ function BuyModal({ bundle, onClose, dm }) {
             <div style={{ fontSize: 36, fontWeight: 700, color: palette.text, letterSpacing: "-0.03em", marginTop: 8, lineHeight: 1 }}>
               {bundle.data}
             </div>
-            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ fontSize: 13, color: palette.muted, marginTop: 6, display: "flex", alignItems: "center", gap: 4 }}>
               {Icon.clock(palette.muted, 12)}
               <span>{bundle.validity || "No expiry"}</span>
             </div>
@@ -420,22 +407,8 @@ function BuyModal({ bundle, onClose, dm }) {
             Recipient details
           </div>
 
-          <InputField
-            icon={Icon.phone(palette.muted, 16)}
-            type="tel"
-            placeholder="Recipient phone number"
-            value={recipientPhone}
-            onChange={e => setRecipient(e.target.value)}
-            dm={dm}
-          />
-          <InputField
-            icon={Icon.mail(palette.muted, 16)}
-            type="email"
-            placeholder="Email address for receipt"
-            value={payerEmail}
-            onChange={e => setEmail(e.target.value)}
-            dm={dm}
-          />
+          <InputField icon={Icon.phone(palette.muted, 16)} type="tel" placeholder="Recipient phone number" value={recipientPhone} onChange={e => setRecipient(e.target.value)} dm={dm} />
+          <InputField icon={Icon.mail(palette.muted, 16)} type="email" placeholder="Email address for receipt" value={payerEmail} onChange={e => setEmail(e.target.value)} dm={dm} />
 
           {error && (
             <div style={{
@@ -449,17 +422,16 @@ function BuyModal({ bundle, onClose, dm }) {
             </div>
           )}
 
-          {/* Payment summary */}
+          {/* Summary */}
           <div style={{
             background: palette.subtle, borderRadius: 12,
             padding: "14px 16px", marginBottom: 20,
             border: `1px solid ${palette.border}`,
           }}>
             {[
-              ["Bundle",          `${bundle.data}`],
-              ["Network",         bundle.network === "mtn" ? "MTN" : "Telecel"],
-              ["Bundle price",    gh(bundle.price)],
-              ["Processing fee",  `+ ${gh(paystackFee)}`],
+              ["Bundle",   bundle.data],
+              ["Network",  bundle.network === "mtn" ? "MTN" : "Telecel"],
+              ["Validity", bundle.validity || "No expiry"],
             ].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
                 <span style={{ color: palette.muted }}>{k}</span>
@@ -472,7 +444,7 @@ function BuyModal({ bundle, onClose, dm }) {
             }}>
               <span style={{ fontSize: 13, color: palette.muted }}>Total</span>
               <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
-                {gh(totalAmount)}
+                {gh(bundle.price)}
               </span>
             </div>
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: palette.muted }}>
@@ -495,11 +467,10 @@ function BuyModal({ bundle, onClose, dm }) {
               fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             }}>
-              {loading ? (
-                <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
-              ) : (
-                <>{Icon.arrow("#fff", 16)} Pay {gh(totalAmount)}</>
-              )}
+              {loading
+                ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                : <>{Icon.arrow("#fff", 16)} Pay {gh(bundle.price)}</>
+              }
             </button>
           </div>
         </div>
@@ -539,19 +510,20 @@ function PaymentCallback() {
       ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#FEF2F2", border: "1px solid #FECACA", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.x("#DC2626", 28)}</div>
       : <div style={{ width: 64, height: 64, borderRadius: "50%", background: T.violetLight, border: `1px solid ${T.violet}30`, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ width: 28, height: 28, border: `3px solid ${T.violet}30`, borderTopColor: T.violet, borderRadius: "50%", display: "inline-block", animation: "spin .8s linear infinite" }} /></div>;
 
-  const title   = isSuccess ? "Payment confirmed" : isFailed ? "Payment failed" : "Processing payment";
-  const message = isSuccess
-    ? "Your data bundle has been delivered successfully."
-    : isFailed
-      ? "Your payment was not completed. No charge was made."
-      : "Please wait while we confirm your payment…";
-
   return (
     <div style={{ minHeight: "100vh", background: "#F8F7FF", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ background: "#fff", borderRadius: 20, padding: "40px 36px", width: "100%", maxWidth: 400, border: "1px solid #E5E7EB", boxShadow: "0 8px 40px rgba(0,0,0,0.08)", textAlign: "center", animation: "fadeUp .4s ease" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>{iconEl}</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 8 }}>{title}</div>
-        <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 24 }}>{message}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 8 }}>
+          {isSuccess ? "Payment confirmed" : isFailed ? "Payment failed" : "Processing payment"}
+        </div>
+        <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 24 }}>
+          {isSuccess
+            ? "Your data bundle has been delivered successfully."
+            : isFailed
+              ? "Your payment was not completed. No charge was made."
+              : "Please wait while we confirm your payment…"}
+        </div>
         {reference && (
           <div style={{ background: "#F8F7FF", border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 16px", fontSize: 12, color: "#6B7280", marginBottom: 24, fontFamily: "'DM Mono', monospace" }}>
             Ref: {reference}
@@ -644,15 +616,12 @@ function StoreView({ onBuy, dm }) {
               display: "flex", flexDirection: "column",
               animation: `fadeUp .4s ease ${i * 0.05}s both`,
             }}>
-              <div style={{ marginBottom: 14 }}>
-                <Badge network={b.network} />
-              </div>
+              <div style={{ marginBottom: 14 }}><Badge network={b.network} /></div>
               <div style={{ fontSize: 32, fontWeight: 700, color: palette.text, letterSpacing: "-0.03em", lineHeight: 1, marginBottom: 4 }}>
                 {b.data}
               </div>
               <div style={{ fontSize: 12, color: palette.muted, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                {Icon.clock(palette.muted, 12)}
-                <span>{b.validity || "No expiry"}</span>
+                {Icon.clock(palette.muted, 12)} <span>{b.validity || "No expiry"}</span>
               </div>
               <div style={{ marginTop: "auto", paddingTop: 14 }}>
                 <div style={{ fontSize: 22, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em", marginBottom: 12 }}>
@@ -664,8 +633,7 @@ function StoreView({ onBuy, dm }) {
                   border: "none", borderRadius: 9, color: "#fff",
                   fontSize: 13, fontWeight: 600, cursor: "pointer",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(91,33,182,0.3)",
-                  transition: "opacity .15s",
+                  boxShadow: "0 2px 8px rgba(91,33,182,0.3)", transition: "opacity .15s",
                 }}
                   onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
                   onMouseLeave={e => e.currentTarget.style.opacity = "1"}
@@ -737,10 +705,10 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
   };
 
   const stats = [
-    { label: "Total orders",   value: orders.length,                                       icon: Icon.orders(T.violet, 20)    },
-    { label: "Revenue",        value: gh(revenue),                                         icon: Icon.revenue(T.violet, 20)   },
-    { label: "Active bundles", value: bundles.length,                                      icon: Icon.box(T.violet, 20)       },
-    { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length, icon: Icon.delivered(T.violet, 20) },
+    { label: "Total orders",   value: orders.length,                                       icon: Icon.orders(T.violet, 20)      },
+    { label: "Revenue",        value: gh(revenue),                                         icon: Icon.revenue(T.violet, 20)     },
+    { label: "Active bundles", value: bundles.length,                                      icon: Icon.box(T.violet, 20)         },
+    { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length, icon: Icon.deliveredIcon(T.violet, 20) },
   ];
 
   return (
@@ -841,11 +809,11 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>{["Reference","Bundle","Recipient","Bundle price","Fee","Total","Status"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+              <tr>{["Reference","Bundle","Recipient","Amount","Status"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {orders.length === 0 ? (
-                <tr><td colSpan={7} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
+                <tr><td colSpan={5} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
               ) : orders.map(o => (
                 <tr key={o.reference}>
                   <td style={{ ...tdS, fontFamily: "'DM Mono', monospace", fontSize: 11, color: palette.muted }}>{o.reference}</td>
@@ -856,9 +824,7 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
                     </div>
                   </td>
                   <td style={tdS}>{o.recipientPhone}</td>
-                  <td style={{ ...tdS, color: T.violet, fontWeight: 600 }}>{gh(o.bundle?.price || 0)}</td>
-                  <td style={{ ...tdS, color: palette.muted }}>{gh(o.paystackFee || 0)}</td>
-                  <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.totalAmount || 0)}</td>
+                  <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.bundle?.price || 0)}</td>
                   <td style={tdS}><StatusBadge status={o.status} /></td>
                 </tr>
               ))}

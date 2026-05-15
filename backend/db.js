@@ -1,12 +1,19 @@
 const bundles = [
-  { id: 'b1', network: 'telecel', data: '500MB', validity: '1 day',   expiry: '90 days', price: 3  },
-  { id: 'b2', network: 'telecel', data: '1GB',   validity: '3 days',  expiry: '90 days', price: 5  },
-  { id: 'b3', network: 'telecel', data: '2GB',   validity: '7 days',  expiry: '90 days', price: 10 },
-  { id: 'b4', network: 'telecel', data: '5GB',   validity: '30 days', expiry: '90 days', price: 25 },
-  { id: 'b5', network: 'mtn',     data: '1GB',   validity: '1 day',   expiry: '90 days', price: 4  },
-  { id: 'b6', network: 'mtn',     data: '3GB',   validity: '7 days',  expiry: '90 days', price: 15 },
-  { id: 'b7', network: 'mtn',     data: '6GB',   validity: '30 days', expiry: '90 days', price: 30 },
-  { id: 'b8', network: 'mtn',     data: '10GB',  validity: '30 days', expiry: '90 days', price: 50 },
+  // ── MTN MTNUP2U ──────────────────────────────────────────────────────────
+  { id: 'b1',  network: 'mtn', data: '1GB',  validity: 'No expiry', price: 6,   hubnetCost: 4.20  },
+  { id: 'b2',  network: 'mtn', data: '2GB',  validity: 'No expiry', price: 11,  hubnetCost: 8.00  },
+  { id: 'b3',  network: 'mtn', data: '3GB',  validity: 'No expiry', price: 15,  hubnetCost: 12.00 },
+  { id: 'b4',  network: 'mtn', data: '4GB',  validity: 'No expiry', price: 20,  hubnetCost: 16.00 },
+  { id: 'b5',  network: 'mtn', data: '5GB',  validity: 'No expiry', price: 25,  hubnetCost: 20.00 },
+  { id: 'b6',  network: 'mtn', data: '6GB',  validity: 'No expiry', price: 29,  hubnetCost: 24.00 },
+  { id: 'b7',  network: 'mtn', data: '8GB',  validity: 'No expiry', price: 38,  hubnetCost: 32.00 },
+  { id: 'b8',  network: 'mtn', data: '10GB', validity: 'No expiry', price: 46,  hubnetCost: 38.50 },
+
+  // ── TELECEL ───────────────────────────────────────────────────────────────
+  { id: 'b9',  network: 'telecel', data: '5GB',  validity: 'No expiry', price: 23,  hubnetCost: 18.00  },
+  { id: 'b10', network: 'telecel', data: '10GB', validity: 'No expiry', price: 40,  hubnetCost: 34.50  },
+  { id: 'b11', network: 'telecel', data: '15GB', validity: 'No expiry', price: 60,  hubnetCost: 51.00  },
+  { id: 'b12', network: 'telecel', data: '20GB', validity: 'No expiry', price: 78,  hubnetCost: 67.50  },
 ];
 
 const orders = {};

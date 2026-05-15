@@ -40,6 +40,18 @@ app.use('/api/bundles', bundleRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/webhook', webhookRoutes);
 
+// Hubnet delivery webhook
+app.post('/api/webhook/hubnet', (req, res) => {
+  console.log('[HUBNET WEBHOOK]', req.body);
+  const { reference, status } = req.body;
+  if (reference && status) {
+    const deliveryStatus = status === 'success' ? 'delivered' : 'delivery_failed';
+    const db = require('./db');
+    db.updateOrder(reference, { deliveryStatus, updatedAt: Date.now() });
+  }
+  res.sendStatus(200);
+});
+
 // Keep-alive ping every 1 minute
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 setInterval(async () => {

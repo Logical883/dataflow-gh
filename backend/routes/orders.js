@@ -41,6 +41,7 @@ router.post('/', async (req, res) => {
   });
 
   try {
+    console.log(`[ORDER] Bundle: ${bundle.price} | Fee: ${paystackFee} | Total: ${totalAmount} | Pesewas: ${Math.round(totalAmount * 100)}`);
     const response = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {

@@ -480,7 +480,6 @@ function StoreView({ onBuy }) {
           gap: 14,
         }}>
           {visible.map((b) => {
-            
             return (
               <div key={b.id} style={{
                 background: "#fff", borderRadius: 20, padding: 18,

@@ -348,13 +348,19 @@ function AdminLogin({ onLogin }) {
   );
 }
 
-// ── Buy Modal ─────────────────────────────────────────────────────────────────
+
 function BuyModal({ bundle, onClose, dm }) {
   const [recipientPhone, setRecipient] = useState("");
   const [payerEmail, setEmail]         = useState("");
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
   const palette = dm ? dark : light;
+
+  const paystackFee = Math.min(
+    parseFloat(((bundle.price * 0.015) + 0.50).toFixed(2)),
+    2.00
+  );
+  const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
 
   const handleBuy = async () => {
     if (!recipientPhone || !payerEmail) { setError("Please fill in all fields."); return; }
@@ -429,9 +435,11 @@ function BuyModal({ bundle, onClose, dm }) {
             border: `1px solid ${palette.border}`,
           }}>
             {[
-              ["Bundle",   bundle.data],
-              ["Network",  bundle.network === "mtn" ? "MTN" : "Telecel"],
-              ["Validity", bundle.validity || "No expiry"],
+              ["Bundle",         bundle.data],
+              ["Network",        bundle.network === "mtn" ? "MTN" : "Telecel"],
+              ["Validity",       bundle.validity || "No expiry"],
+              ["Bundle price",   gh(bundle.price)],
+              ["Processing fee", `+ ${gh(paystackFee)}`],
             ].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
                 <span style={{ color: palette.muted }}>{k}</span>
@@ -444,7 +452,7 @@ function BuyModal({ bundle, onClose, dm }) {
             }}>
               <span style={{ fontSize: 13, color: palette.muted }}>Total</span>
               <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
-                {gh(bundle.price)}
+                {gh(totalAmount)}
               </span>
             </div>
             <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: palette.muted }}>
@@ -469,7 +477,7 @@ function BuyModal({ bundle, onClose, dm }) {
             }}>
               {loading
                 ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
-                : <>{Icon.arrow("#fff", 16)} Pay {gh(bundle.price)}</>
+                : <>{Icon.arrow("#fff", 16)} Pay {gh(totalAmount)}</>
               }
             </button>
           </div>

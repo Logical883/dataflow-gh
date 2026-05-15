@@ -15,7 +15,15 @@ router.post('/', async (req, res) => {
   const bundle = db.getBundle(bundleId);
   if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
 
-  const reference = 'DF-' + uuidv4().slice(0, 10).toUpperCase();
+  const reference   = 'DF-' + uuidv4().slice(0, 10).toUpperCase();
+
+  // Add Paystack fee on top so customer covers it
+  // Paystack charges 1.5% + GH₵ 0.50, capped at GH₵ 2.00
+  const paystackFee = Math.min(
+    parseFloat(((bundle.price * 0.015) + 0.50).toFixed(2)),
+    2.00
+  );
+  const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
 
   db.createOrder({
     reference,
@@ -23,18 +31,20 @@ router.post('/', async (req, res) => {
     bundle,
     recipientPhone,
     payerEmail,
+    paystackFee,
+    totalAmount,
     status:    'pending',
     createdAt: Date.now(),
   });
 
   try {
-    console.log(`[ORDER] Bundle: ${bundle.price} | Pesewas: ${Math.round(bundle.price * 100)} | Ref: ${reference}`);
+    console.log(`[ORDER] Bundle: GH₵${bundle.price} | Fee: GH₵${paystackFee} | Total: GH₵${totalAmount} | Pesewas: ${Math.round(totalAmount * 100)}`);
 
     const response = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {
         email:        payerEmail,
-        amount:       Math.round(bundle.price * 100),
+        amount:       Math.round(totalAmount * 100),
         currency:     'GHS',
         reference,
         callback_url: `${process.env.FRONTEND_URL}/payment/callback`,
@@ -44,6 +54,8 @@ router.post('/', async (req, res) => {
           data:        bundle.data,
           network:     bundle.network,
           bundlePrice: bundle.price,
+          paystackFee,
+          totalAmount,
         },
       },
       {
@@ -58,6 +70,8 @@ router.post('/', async (req, res) => {
       reference,
       checkoutUrl: response.data.data.authorization_url,
       bundlePrice: bundle.price,
+      paystackFee,
+      totalAmount,
     });
 
   } catch (err) {

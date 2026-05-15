@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 const API = process.env.REACT_APP_API_URL;
+const WHATSAPP_NUMBER = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
 
 // ── Theme ────────────────────────────────────────────────────────────────────
@@ -24,15 +25,6 @@ const STATUS = {
   pending:   { bg: "#FFF4DE", color: "#8B5E00" },
   delivered: { bg: "#E8FBF3", color: "#1A6B45" },
   failed:    { bg: "#FDE8E8", color: "#8B1A1A" },
-};
-
-// ── Shared styles ─────────────────────────────────────────────────────────────
-const card = {
-  background: "#fff",
-  borderRadius: 20,
-  padding: 20,
-  marginBottom: 16,
-  boxShadow: "0 2px 16px rgba(108,62,232,0.07)",
 };
 
 const inputStyle = {
@@ -185,11 +177,18 @@ function AdminLogin({ onLogin }) {
 }
 
 // ── Buy Modal ─────────────────────────────────────────────────────────────────
-function BuyModal({ bundle, onClose }) {
+function BuyModal({ bundle, onClose, darkMode }) {
   const [recipientPhone, setRecipient] = useState("");
   const [payerEmail, setEmail]         = useState("");
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
+
+  const modalInputStyle = {
+    ...inputStyle,
+    background: darkMode ? "#0F0A1E" : "#FAFAFA",
+    color: darkMode ? "#F0EAFF" : "#1a1a2e",
+    border: `1.5px solid ${darkMode ? "#2D1B6B" : "#E8E0FB"}`,
+  };
 
   const handleBuy = async () => {
     if (!recipientPhone || !payerEmail) {
@@ -214,14 +213,15 @@ function BuyModal({ bundle, onClose }) {
   return (
     <div style={{
       position: "fixed", inset: 0,
-      background: "rgba(45,27,107,0.55)",
+      background: "rgba(45,27,107,0.6)",
       zIndex: 500, display: "flex",
       alignItems: "center", justifyContent: "center", padding: 16,
     }}>
       <div style={{
-        background: "#fff", borderRadius: 24, padding: 28,
+        background: darkMode ? "#1A1030" : "#fff",
+        borderRadius: 24, padding: 28,
         width: "100%", maxWidth: 400,
-        boxShadow: "0 16px 60px rgba(108,62,232,0.2)",
+        boxShadow: "0 16px 60px rgba(108,62,232,0.25)",
         maxHeight: "90vh", overflowY: "auto",
       }}>
         {/* Bundle header */}
@@ -239,24 +239,24 @@ function BuyModal({ bundle, onClose }) {
           </div>
         </div>
 
-        <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: darkMode ? "#9B7FF0" : "#555", display: "block", marginBottom: 6 }}>
           Recipient number (who gets the data)
         </label>
         <input
           type="tel" placeholder="e.g. 0241234567"
           value={recipientPhone}
           onChange={(e) => setRecipient(e.target.value)}
-          style={inputStyle}
+          style={modalInputStyle}
         />
 
-        <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: darkMode ? "#9B7FF0" : "#555", display: "block", marginBottom: 6 }}>
           Email address (for receipt)
         </label>
         <input
           type="email" placeholder="you@email.com"
           value={payerEmail}
           onChange={(e) => setEmail(e.target.value)}
-          style={inputStyle}
+          style={modalInputStyle}
         />
 
         {error && (
@@ -271,35 +271,38 @@ function BuyModal({ bundle, onClose }) {
 
         {/* Summary */}
         <div style={{
-          background: theme.purpleLight, borderRadius: 14,
-          padding: "14px 18px", marginBottom: 20,
+          background: darkMode ? "#0F0A1E" : theme.purpleLight,
+          borderRadius: 14, padding: "14px 18px", marginBottom: 20,
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: "#666" }}>Bundle</span>
-            <span style={{ fontWeight: 600 }}>{bundle.data} — {bundle.validity}</span>
+            <span style={{ color: darkMode ? "#9B7FF0" : "#666" }}>Bundle</span>
+            <span style={{ fontWeight: 600, color: darkMode ? "#F0EAFF" : "#1a1a2e" }}>{bundle.data} — {bundle.validity}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-            <span style={{ color: "#666" }}>Expires in</span>
-            <span style={{ fontWeight: 600 }}>{bundle.expiry || "90 days"}</span>
+            <span style={{ color: darkMode ? "#9B7FF0" : "#666" }}>Expires in</span>
+            <span style={{ fontWeight: 600, color: darkMode ? "#F0EAFF" : "#1a1a2e" }}>{bundle.expiry || "90 days"}</span>
           </div>
           <div style={{
             display: "flex", justifyContent: "space-between",
             fontSize: 16, fontWeight: 800, marginTop: 8,
-            paddingTop: 8, borderTop: "1px solid #D9CFFB",
+            paddingTop: 8, borderTop: `1px solid ${darkMode ? "#2D1B6B" : "#D9CFFB"}`,
           }}>
-            <span style={{ color: theme.purpleDeep }}>Total</span>
+            <span style={{ color: darkMode ? "#9B7FF0" : theme.purpleDeep }}>Total</span>
             <span style={{ color: theme.purple }}>{gh(bundle.price)}</span>
           </div>
-          <div style={{ fontSize: 11, color: "#999", marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: darkMode ? "#6B5FA0" : "#999", marginTop: 8 }}>
             Secure payment via Paystack
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{
-            padding: "13px 18px", border: "1.5px solid #E8E0FB",
-            borderRadius: 12, background: "#fff",
-            color: "#666", fontSize: 14, cursor: "pointer",
+            padding: "13px 18px",
+            border: `1.5px solid ${darkMode ? "#2D1B6B" : "#E8E0FB"}`,
+            borderRadius: 12,
+            background: darkMode ? "#0F0A1E" : "#fff",
+            color: darkMode ? "#9B7FF0" : "#666",
+            fontSize: 14, cursor: "pointer",
           }}>
             Cancel
           </button>
@@ -345,7 +348,8 @@ function PaymentCallback() {
 
   const icons = {
     delivered: "✅", paid: "✅",
-    pending: "⏳", failed: "❌", error: "❌", checking: "⏳",
+    pending: "⏳", failed: "❌",
+    error: "❌", checking: "⏳",
   };
 
   const messages = {
@@ -372,9 +376,7 @@ function PaymentCallback() {
         width: "100%", maxWidth: 380, textAlign: "center",
         boxShadow: "0 8px 40px rgba(108,62,232,0.12)",
       }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>
-          {icons[status]}
-        </div>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>{icons[status]}</div>
         <div style={{
           fontSize: 20, fontWeight: 800, marginBottom: 10,
           color: isSuccess ? "#1A6B45" : isFailed ? "#8B1A1A" : theme.purpleDeep,
@@ -384,7 +386,6 @@ function PaymentCallback() {
         <div style={{ fontSize: 14, color: "#666", lineHeight: 1.7, marginBottom: 24 }}>
           {messages[status]}
         </div>
-
         {reference && (
           <div style={{
             background: theme.purpleLight, borderRadius: 10,
@@ -395,13 +396,11 @@ function PaymentCallback() {
             Ref: {reference}
           </div>
         )}
-
         <a href="/" style={{
           display: "block", padding: "13px 0",
           background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
           borderRadius: 12, color: "#fff",
-          fontSize: 15, fontWeight: 700,
-          textDecoration: "none",
+          fontSize: 15, fontWeight: 700, textDecoration: "none",
         }}>
           Back to store
         </a>
@@ -411,7 +410,7 @@ function PaymentCallback() {
 }
 
 // ── Store View ────────────────────────────────────────────────────────────────
-function StoreView({ onBuy }) {
+function StoreView({ onBuy, darkMode, cardBg, textPrimary, textSecondary }) {
   const [bundles, setBundles] = useState([]);
   const [filter, setFilter]   = useState("all");
   const [loading, setLoading] = useState(true);
@@ -434,12 +433,8 @@ function StoreView({ onBuy }) {
         borderRadius: 24, padding: "32px 24px",
         marginBottom: 28, color: "#fff",
       }}>
-        <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6 }}>
-          Welcome to
-        </div>
-        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>
-          DataFlow GH 📶
-        </div>
+        <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6 }}>Welcome to</div>
+        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>DataFlow GH 📶</div>
         <div style={{ fontSize: 14, opacity: 0.8, lineHeight: 1.6 }}>
           Buy MTN & Telecel data bundles instantly.<br />
           Pay securely with Paystack.
@@ -457,8 +452,8 @@ function StoreView({ onBuy }) {
             padding: "8px 20px", borderRadius: 20, fontSize: 13,
             fontWeight: filter === key ? 700 : 400, cursor: "pointer",
             border: "none",
-            background: filter === key ? theme.purple : "#fff",
-            color: filter === key ? "#fff" : "#666",
+            background: filter === key ? theme.purple : cardBg,
+            color: filter === key ? "#fff" : textSecondary,
             boxShadow: filter === key
               ? "0 4px 14px rgba(108,62,232,0.3)"
               : "0 2px 8px rgba(0,0,0,0.06)",
@@ -470,7 +465,7 @@ function StoreView({ onBuy }) {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", color: "#aaa", padding: 40, fontSize: 14 }}>
+        <div style={{ textAlign: "center", color: textSecondary, padding: 40, fontSize: 14 }}>
           Loading bundles…
         </div>
       ) : (
@@ -479,53 +474,55 @@ function StoreView({ onBuy }) {
           gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))",
           gap: 14,
         }}>
-          {visible.map((b) => {
-            return (
-              <div key={b.id} style={{
-                background: "#fff", borderRadius: 20, padding: 18,
-                boxShadow: "0 2px 16px rgba(108,62,232,0.07)",
-                display: "flex", flexDirection: "column", gap: 8,
-                transition: "transform .2s, box-shadow .2s",
-                cursor: "pointer",
+          {visible.map((b) => (
+            <div key={b.id} style={{
+              background: cardBg, borderRadius: 20, padding: 18,
+              boxShadow: darkMode
+                ? "0 2px 16px rgba(0,0,0,.3)"
+                : "0 2px 16px rgba(108,62,232,0.07)",
+              display: "flex", flexDirection: "column", gap: 8,
+              transition: "transform .2s, box-shadow .2s",
+              cursor: "pointer",
+            }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 8px 28px rgba(108,62,232,0.2)";
               }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow = "0 8px 28px rgba(108,62,232,0.15)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 2px 16px rgba(108,62,232,0.07)";
-                }}
-              >
-                <Badge network={b.network} />
-                <div style={{ fontSize: 30, fontWeight: 800, color: theme.purpleDeep, lineHeight: 1 }}>
-                  {b.data}
-                </div>
-                <div style={{ fontSize: 12, color: "#999" }}>{b.validity}</div>
-                <div style={{ fontSize: 11, color: theme.purpleMid, fontWeight: 600 }}>
-                  Expires in {b.expiry || "90 days"}
-                </div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: theme.purple }}>
-                  {gh(b.price)}
-                </div>
-                <button
-                  onClick={() => onBuy(b)}
-                  style={{
-                    marginTop: 4, padding: "10px 0",
-                    background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
-                    border: "none", borderRadius: 12, color: "#fff",
-                    fontSize: 13, fontWeight: 700, cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(108,62,232,0.3)",
-                    transition: "opacity .2s",
-                  }}
-                  onMouseEnter={e => e.target.style.opacity = "0.85"}
-                  onMouseLeave={e => e.target.style.opacity = "1"}
-                >
-                  Buy now
-                </button>
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = darkMode
+                  ? "0 2px 16px rgba(0,0,0,.3)"
+                  : "0 2px 16px rgba(108,62,232,0.07)";
+              }}
+            >
+              <Badge network={b.network} />
+              <div style={{ fontSize: 30, fontWeight: 800, color: textPrimary, lineHeight: 1 }}>
+                {b.data}
               </div>
-            );
-          })}
+              <div style={{ fontSize: 12, color: textSecondary }}>{b.validity}</div>
+              <div style={{ fontSize: 11, color: theme.purpleMid, fontWeight: 600 }}>
+                Expires in {b.expiry || "90 days"}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: theme.purple }}>
+                {gh(b.price)}
+              </div>
+              <button
+                onClick={() => onBuy(b)}
+                style={{
+                  marginTop: 4, padding: "10px 0",
+                  background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
+                  border: "none", borderRadius: 12, color: "#fff",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(108,62,232,0.3)",
+                  transition: "opacity .2s",
+                }}
+                onMouseEnter={e => e.target.style.opacity = "0.85"}
+                onMouseLeave={e => e.target.style.opacity = "1"}
+              >
+                Buy now
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -533,7 +530,7 @@ function StoreView({ onBuy }) {
 }
 
 // ── Admin View ────────────────────────────────────────────────────────────────
-function AdminView({ showToast, adminCreds, onLogout }) {
+function AdminView({ showToast, adminCreds, onLogout, darkMode, cardBg, textPrimary, textSecondary }) {
   const [bundles, setBundles] = useState([]);
   const [orders, setOrders]   = useState([]);
   const [form, setForm]       = useState({
@@ -574,16 +571,35 @@ function AdminView({ showToast, adminCreds, onLogout }) {
     .filter((o) => o.status === "delivered")
     .reduce((s, o) => s + (o.bundle?.price || 0), 0);
 
+  const cardStyle = {
+    background: cardBg,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    boxShadow: darkMode
+      ? "0 2px 16px rgba(0,0,0,.3)"
+      : "0 2px 16px rgba(108,62,232,0.07)",
+  };
+
   const thStyle = {
     textAlign: "left", fontSize: 11, fontWeight: 700,
-    color: "#999", padding: "0 12px 12px",
-    borderBottom: "1.5px solid #F0EAFF",
+    color: textSecondary, padding: "0 12px 12px",
+    borderBottom: `1.5px solid ${darkMode ? "#2D1B6B" : "#F0EAFF"}`,
     textTransform: "uppercase", letterSpacing: "0.05em",
   };
+
   const tdStyle = {
     padding: "12px 12px",
-    borderBottom: "1px solid #FAF8FF",
-    color: "#333", fontSize: 13,
+    borderBottom: `1px solid ${darkMode ? "#1A1030" : "#FAF8FF"}`,
+    color: textPrimary, fontSize: 13,
+  };
+
+  const adminInputStyle = {
+    ...inputStyle,
+    background: darkMode ? "#0F0A1E" : "#FAFAFA",
+    color: darkMode ? "#F0EAFF" : "#1a1a2e",
+    border: `1.5px solid ${darkMode ? "#2D1B6B" : "#E8E0FB"}`,
+    marginBottom: 0,
   };
 
   return (
@@ -621,19 +637,21 @@ function AdminView({ showToast, adminCreds, onLogout }) {
           { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length, icon: "✅" },
         ].map(({ label, value, icon }) => (
           <div key={label} style={{
-            background: "#fff", borderRadius: 18, padding: "16px 18px",
-            boxShadow: "0 2px 16px rgba(108,62,232,0.07)",
+            background: cardBg, borderRadius: 18, padding: "16px 18px",
+            boxShadow: darkMode
+              ? "0 2px 16px rgba(0,0,0,.3)"
+              : "0 2px 16px rgba(108,62,232,0.07)",
           }}>
             <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-            <div style={{ fontSize: 12, color: "#999", marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: theme.purpleDeep }}>{value}</div>
+            <div style={{ fontSize: 12, color: textSecondary, marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: textPrimary }}>{value}</div>
           </div>
         ))}
       </div>
 
       {/* Add bundle */}
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: theme.purpleDeep, marginBottom: 16 }}>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: textPrimary, marginBottom: 16 }}>
           Add new bundle
         </div>
         <div style={{
@@ -644,23 +662,23 @@ function AdminView({ showToast, adminCreds, onLogout }) {
           <select
             value={form.network}
             onChange={(e) => setForm((f) => ({ ...f, network: e.target.value }))}
-            style={{ ...inputStyle, marginBottom: 0 }}
+            style={adminInputStyle}
           >
             <option value="telecel">Telecel</option>
             <option value="mtn">MTN</option>
           </select>
           <input placeholder="Data e.g. 2GB" value={form.data}
             onChange={(e) => setForm((f) => ({ ...f, data: e.target.value }))}
-            style={{ ...inputStyle, marginBottom: 0 }} />
+            style={adminInputStyle} />
           <input placeholder="Validity e.g. 7 days" value={form.validity}
             onChange={(e) => setForm((f) => ({ ...f, validity: e.target.value }))}
-            style={{ ...inputStyle, marginBottom: 0 }} />
+            style={adminInputStyle} />
           <input placeholder="Expiry e.g. 90 days" value={form.expiry}
             onChange={(e) => setForm((f) => ({ ...f, expiry: e.target.value }))}
-            style={{ ...inputStyle, marginBottom: 0 }} />
+            style={adminInputStyle} />
           <input type="number" placeholder="Price GH₵" value={form.price}
             onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-            style={{ ...inputStyle, marginBottom: 0 }} />
+            style={adminInputStyle} />
           <button onClick={addBundle} style={{
             padding: "12px 0",
             background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
@@ -673,8 +691,8 @@ function AdminView({ showToast, adminCreds, onLogout }) {
       </div>
 
       {/* Bundles table */}
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: theme.purpleDeep, marginBottom: 16 }}>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: textPrimary, marginBottom: 16 }}>
           Bundles
         </div>
         <div style={{ overflowX: "auto" }}>
@@ -711,8 +729,8 @@ function AdminView({ showToast, adminCreds, onLogout }) {
       </div>
 
       {/* Orders table */}
-      <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: theme.purpleDeep, marginBottom: 16 }}>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: textPrimary, marginBottom: 16 }}>
           Orders
         </div>
         <div style={{ overflowX: "auto" }}>
@@ -727,7 +745,7 @@ function AdminView({ showToast, adminCreds, onLogout }) {
             <tbody>
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ ...tdStyle, color: "#bbb", textAlign: "center", padding: 32 }}>
+                  <td colSpan={5} style={{ ...tdStyle, color: textSecondary, textAlign: "center", padding: 32 }}>
                     No orders yet
                   </td>
                 </tr>
@@ -735,7 +753,7 @@ function AdminView({ showToast, adminCreds, onLogout }) {
                 const sc = STATUS[o.status] || { bg: "#f0f0f0", color: "#555" };
                 return (
                   <tr key={o.reference}>
-                    <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: "#888" }}>
+                    <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: 11, color: textSecondary }}>
                       {o.reference}
                     </td>
                     <td style={tdStyle}>
@@ -772,6 +790,14 @@ export default function App() {
   const [toast, setToast]           = useState({ msg: "", type: "success" });
   const [adminCreds, setAdminCreds] = useState(null);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [darkMode, setDarkMode]     = useState(false);
+
+  const bg            = darkMode ? "#0F0A1E" : "#F4F0FF";
+  const navBg         = darkMode ? "#1A1030" : "#fff";
+  const cardBg        = darkMode ? "#1A1030" : "#fff";
+  const textPrimary   = darkMode ? "#F0EAFF" : "#1a1a2e";
+  const textSecondary = darkMode ? "#9B7FF0" : "#888";
+  const borderColor   = darkMode ? "#2D1B6B" : "#eee";
 
   const showToast = useCallback((msg, type = "success") => {
     setToast({ msg, type });
@@ -796,7 +822,13 @@ export default function App() {
     }
   };
 
-  // Show payment callback page
+  const openWhatsApp = () => {
+    window.open(
+      `https://wa.me/${WHATSAPP_NUMBER}?text=Hello!%20I%20need%20help%20with%20a%20data%20bundle.`,
+      "_blank"
+    );
+  };
+
   if (window.location.pathname === "/payment/callback") {
     return <PaymentCallback />;
   }
@@ -806,12 +838,17 @@ export default function App() {
   }
 
   return (
-    <div style={{ background: "#F4F0FF", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ background: bg, minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", transition: "background .3s" }}>
+
+      {/* Nav */}
       <nav style={{
-        background: "#fff", padding: "14px 20px",
+        background: navBg, padding: "14px 20px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         position: "sticky", top: 0, zIndex: 100,
-        boxShadow: "0 2px 16px rgba(108,62,232,0.08)",
+        boxShadow: darkMode
+          ? "0 2px 16px rgba(0,0,0,.4)"
+          : "0 2px 16px rgba(108,62,232,0.08)",
+        transition: "background .3s",
       }}>
         <div style={{
           fontSize: 18, fontWeight: 800, color: theme.purple,
@@ -819,13 +856,15 @@ export default function App() {
         }}>
           📶 DataFlow GH
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={() => setTab("store")} style={{
             padding: "8px 18px", borderRadius: 10, fontSize: 13,
             fontWeight: tab === "store" ? 700 : 400, cursor: "pointer",
             border: "none",
             background: tab === "store" ? theme.purpleLight : "transparent",
-            color: tab === "store" ? theme.purple : "#888",
+            color: tab === "store" ? theme.purple : textSecondary,
+            transition: "all .2s",
           }}>
             Store
           </button>
@@ -834,20 +873,50 @@ export default function App() {
             fontWeight: tab === "admin" ? 700 : 400, cursor: "pointer",
             border: "none",
             background: tab === "admin" ? theme.purpleLight : "transparent",
-            color: tab === "admin" ? theme.purple : "#888",
+            color: tab === "admin" ? theme.purple : textSecondary,
+            transition: "all .2s",
           }}>
             Admin
+          </button>
+
+          {/* Dark mode toggle */}
+          <button
+            onClick={() => setDarkMode(d => !d)}
+            style={{
+              width: 38, height: 38, borderRadius: "50%",
+              border: `1.5px solid ${borderColor}`,
+              background: darkMode ? "#2D1B6B" : "#F4F0FF",
+              cursor: "pointer", fontSize: 18,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all .3s",
+            }}
+            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {darkMode ? "☀️" : "🌙"}
           </button>
         </div>
       </nav>
 
+      {/* Content */}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
-        {tab === "store" && <StoreView onBuy={setBuyBundle} />}
+        {tab === "store" && (
+          <StoreView
+            onBuy={setBuyBundle}
+            darkMode={darkMode}
+            cardBg={cardBg}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
+          />
+        )}
         {tab === "admin" && adminCreds && (
           <AdminView
             showToast={showToast}
             adminCreds={adminCreds}
             onLogout={handleLogout}
+            darkMode={darkMode}
+            cardBg={cardBg}
+            textPrimary={textPrimary}
+            textSecondary={textSecondary}
           />
         )}
       </div>
@@ -856,8 +925,34 @@ export default function App() {
         <BuyModal
           bundle={buyBundle}
           onClose={() => setBuyBundle(null)}
+          darkMode={darkMode}
         />
       )}
+
+      {/* WhatsApp button */}
+      <button
+        onClick={openWhatsApp}
+        style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 9998,
+          width: 56, height: 56, borderRadius: "50%",
+          background: "#25D366", border: "none",
+          cursor: "pointer", fontSize: 28,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 4px 20px rgba(37,211,102,0.5)",
+          transition: "transform .2s, box-shadow .2s",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "scale(1.1)";
+          e.currentTarget.style.boxShadow = "0 6px 28px rgba(37,211,102,0.7)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,211,102,0.5)";
+        }}
+        title="Chat with us on WhatsApp"
+      >
+        💬
+      </button>
 
       <Toast msg={toast.msg} type={toast.type} onDone={() => setToast({ msg: "" })} />
     </div>

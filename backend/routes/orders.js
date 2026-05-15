@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 const db = require('../db');
-const { initiateCharge } = require('../paystack');
 
-// POST /api/orders  — customer buys a bundle
+// POST /api/orders — initialize a Paystack checkout session
 router.post('/', async (req, res) => {
-  const { bundleId, recipientPhone, payerPhone, payerEmail } = req.body;
+  const { bundleId, recipientPhone, payerEmail } = req.body;
 
-  if (!bundleId || !recipientPhone || !payerPhone || !payerEmail) {
+  if (!bundleId || !recipientPhone || !payerEmail) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
@@ -22,42 +22,50 @@ router.post('/', async (req, res) => {
     bundleId,
     bundle,
     recipientPhone,
-    payerPhone,
     payerEmail,
     status: 'pending',
     createdAt: Date.now(),
   });
 
   try {
-    const charge = await initiateCharge({
-      email:     payerEmail,
-      amountGHS: bundle.price,
-      phone:     payerPhone,
-      network:   bundle.network,
+    const response = await axios.post('https://api.paystack.co/transaction/initialize', {
+      email: payerEmail,
+      amount: Math.round(bundle.price * 100),
+      currency: 'GHS',
       reference,
-      metadata:  { bundleId, recipientPhone, data: bundle.data },
+      callback_url: `${process.env.FRONTEND_URL}/payment/callback`,
+      metadata: {
+        bundleId,
+        recipientPhone,
+        data: bundle.data,
+        network: bundle.network,
+        validity: bundle.validity,
+      },
+    }, {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
     });
 
     res.json({
       reference,
-      status: 'pending',
-      message: 'Check your phone and enter your PIN to complete payment.',
-      paystack: charge.data,
+      checkoutUrl: response.data.data.authorization_url,
     });
 
   } catch (err) {
     db.updateOrder(reference, { status: 'failed' });
-    console.error(err.response?.data || err.message);
-    res.status(502).json({ error: 'Payment initiation failed. Try again.' });
+    console.error('[PAYSTACK ERROR]', err.response?.data || err.message);
+    res.status(502).json({ error: 'Payment initialization failed. Try again.' });
   }
 });
 
-// GET /api/orders  — list all orders (admin)
+// GET /api/orders — list all orders (admin)
 router.get('/', (req, res) => {
   res.json({ orders: db.getAllOrders() });
 });
 
-// GET /api/orders/:reference  — poll a single order status
+// GET /api/orders/:reference — get single order status
 router.get('/:reference', (req, res) => {
   const order = db.getOrder(req.params.reference);
   if (!order) return res.status(404).json({ error: 'Order not found' });

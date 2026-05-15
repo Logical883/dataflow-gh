@@ -12,7 +12,7 @@ const theme = {
   purpleLight:"#EDE8FB",
   purpleMid:  "#9B7FF0",
   mtn:        { bg: "#FFF4DE", color: "#8B5E00", btn: "#F0A500" },
-  telecel: { bg: "#FFE8E8", color: "#8B1A1A", btn: "#E83232" },
+  telecel:    { bg: "#FFE8E8", color: "#8B1A1A", btn: "#E83232" },
 };
 
 const NET = {
@@ -83,7 +83,7 @@ function Toast({ msg, type, onDone }) {
   );
 }
 
-// ── Admin Login Screen ────────────────────────────────────────────────────────
+// ── Admin Login ───────────────────────────────────────────────────────────────
 function AdminLogin({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -110,15 +110,14 @@ function AdminLogin({ onLogin }) {
   return (
     <div style={{
       minHeight: "100vh", background: "#F4F0FF",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
+      display: "flex", alignItems: "center",
+      justifyContent: "center", padding: 20,
     }}>
       <div style={{
         background: "#fff", borderRadius: 24, padding: "40px 32px",
         width: "100%", maxWidth: 380,
         boxShadow: "0 8px 40px rgba(108,62,232,0.12)",
       }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             width: 60, height: 60, borderRadius: 18,
@@ -140,8 +139,7 @@ function AdminLogin({ onLogin }) {
           Username
         </label>
         <input
-          type="text"
-          placeholder="Enter username"
+          type="text" placeholder="Enter username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           style={inputStyle}
@@ -151,8 +149,7 @@ function AdminLogin({ onLogin }) {
           Password
         </label>
         <input
-          type="password"
-          placeholder="Enter password"
+          type="password" placeholder="Enter password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleLogin()}
@@ -188,44 +185,14 @@ function AdminLogin({ onLogin }) {
 }
 
 // ── Buy Modal ─────────────────────────────────────────────────────────────────
-function BuyModal({ bundle, onClose, onSuccess }) {
+function BuyModal({ bundle, onClose }) {
   const [recipientPhone, setRecipient] = useState("");
-  const [payerPhone, setPayer]         = useState("");
   const [payerEmail, setEmail]         = useState("");
-  const [sameNumber, setSame]          = useState(true);
   const [loading, setLoading]          = useState(false);
-  const [waiting, setWaiting]          = useState(false);
   const [error, setError]              = useState("");
 
-  const pollOrder = useCallback((reference) => {
-    setWaiting(true);
-    let attempts = 0;
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const { data } = await axios.get(`${API}/api/orders/${reference}`);
-        if (["delivered", "paid"].includes(data.order.status)) {
-          clearInterval(interval);
-          onSuccess(data.order);
-        } else if (data.order.status === "failed") {
-          clearInterval(interval);
-          setWaiting(false);
-          setLoading(false);
-          setError(data.order.failReason || "Payment was declined. Please try again.");
-        }
-      } catch (_) {}
-      if (attempts >= 40) {
-        clearInterval(interval);
-        setWaiting(false);
-        setLoading(false);
-        setError("Payment timed out. Contact support if you were charged.");
-      }
-    }, 3000);
-  }, [onSuccess]);
-
   const handleBuy = async () => {
-    const payer = sameNumber ? recipientPhone : payerPhone;
-    if (!recipientPhone || !payer || !payerEmail) {
+    if (!recipientPhone || !payerEmail) {
       setError("Please fill in all fields.");
       return;
     }
@@ -235,17 +202,14 @@ function BuyModal({ bundle, onClose, onSuccess }) {
       const { data } = await axios.post(`${API}/api/orders`, {
         bundleId: bundle.id,
         recipientPhone,
-        payerPhone: payer,
         payerEmail,
       });
-      pollOrder(data.reference);
+      window.location.href = data.checkoutUrl;
     } catch (e) {
       setLoading(false);
       setError(e.response?.data?.error || "Something went wrong. Try again.");
     }
   };
-
-
 
   return (
     <div style={{
@@ -260,10 +224,10 @@ function BuyModal({ bundle, onClose, onSuccess }) {
         boxShadow: "0 16px 60px rgba(108,62,232,0.2)",
         maxHeight: "90vh", overflowY: "auto",
       }}>
-        {/* Header */}
+        {/* Bundle header */}
         <div style={{
-          background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
-          borderRadius: 16, padding: "20px 20px",
+          background: `linear-gradient(135deg, ${theme.purpleDeep}, ${theme.purple})`,
+          borderRadius: 16, padding: "20px",
           marginBottom: 24, color: "#fff",
         }}>
           <Badge network={bundle.network} />
@@ -275,146 +239,173 @@ function BuyModal({ bundle, onClose, onSuccess }) {
           </div>
         </div>
 
-        {waiting ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              background: theme.purpleLight,
-              display: "flex", alignItems: "center",
-              justifyContent: "center", fontSize: 34,
-              margin: "0 auto 20px",
-            }}>
-              📲
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 17, color: theme.purpleDeep, marginBottom: 10 }}>
-              Check your phone!
-            </div>
-            <div style={{ fontSize: 14, color: "#666", lineHeight: 1.7 }}>
-              A payment prompt has been sent to{" "}
-              <strong>{sameNumber ? recipientPhone : payerPhone}</strong>.
-              <br />
-              Enter your {bundle.network === "mtn" ? "MTN MoMo" : "Telecel Cash"} PIN to complete.
-            </div>
-            <div style={{
-              marginTop: 20, fontSize: 12, color: "#aaa",
-              display: "flex", alignItems: "center",
-              justifyContent: "center", gap: 6,
-            }}>
-              <span style={{
-                display: "inline-block", width: 8, height: 8,
-                borderRadius: "50%", background: theme.purple,
-                animation: "pulse 1.2s infinite",
-              }} />
-              Waiting for confirmation…
-            </div>
+        <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
+          Recipient number (who gets the data)
+        </label>
+        <input
+          type="tel" placeholder="e.g. 0241234567"
+          value={recipientPhone}
+          onChange={(e) => setRecipient(e.target.value)}
+          style={inputStyle}
+        />
+
+        <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
+          Email address (for receipt)
+        </label>
+        <input
+          type="email" placeholder="you@email.com"
+          value={payerEmail}
+          onChange={(e) => setEmail(e.target.value)}
+          style={inputStyle}
+        />
+
+        {error && (
+          <div style={{
+            background: "#FDE8E8", color: "#8B1A1A",
+            borderRadius: 10, padding: "10px 14px",
+            fontSize: 13, marginBottom: 16,
+          }}>
+            {error}
           </div>
-        ) : (
-          <>
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
-              Recipient number (who gets the data)
-            </label>
-            <input
-              type="tel" placeholder="e.g. 0241234567"
-              value={recipientPhone}
-              onChange={(e) => setRecipient(e.target.value)}
-              style={inputStyle}
-            />
-
-            <label style={{
-              display: "flex", alignItems: "center", gap: 10,
-              fontSize: 14, color: "#555", marginBottom: 16, cursor: "pointer",
-            }}>
-              <input
-                type="checkbox" checked={sameNumber}
-                onChange={(e) => setSame(e.target.checked)}
-                style={{ accentColor: theme.purple, width: 16, height: 16 }}
-              />
-              Pay from the same number
-            </label>
-
-            {!sameNumber && (
-              <>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
-                  {bundle.network === "mtn" ? "MTN MoMo" : "Telecel Cash"} number to charge
-                </label>
-                <input
-                  type="tel" placeholder="Number to charge"
-                  value={payerPhone}
-                  onChange={(e) => setPayer(e.target.value)}
-                  style={inputStyle}
-                />
-              </>
-            )}
-
-            <label style={{ fontSize: 13, fontWeight: 600, color: "#555", display: "block", marginBottom: 6 }}>
-              Email address (for receipt)
-            </label>
-            <input
-              type="email" placeholder="you@email.com"
-              value={payerEmail}
-              onChange={(e) => setEmail(e.target.value)}
-              style={inputStyle}
-            />
-
-            {error && (
-              <div style={{
-                background: "#FDE8E8", color: "#8B1A1A",
-                borderRadius: 10, padding: "10px 14px",
-                fontSize: 13, marginBottom: 16,
-              }}>
-                {error}
-              </div>
-            )}
-
-            {/* Summary */}
-            <div style={{
-              background: theme.purpleLight, borderRadius: 14,
-              padding: "14px 18px", marginBottom: 20,
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                <span style={{ color: "#666" }}>Bundle</span>
-                <span style={{ fontWeight: 600 }}>{bundle.data} — {bundle.validity}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                <span style={{ color: "#666" }}>Expires in</span>
-                <span style={{ fontWeight: 600 }}>{bundle.expiry || "90 days"}</span>
-              </div>
-              <div style={{
-                display: "flex", justifyContent: "space-between",
-                fontSize: 16, fontWeight: 800, marginTop: 8,
-                paddingTop: 8, borderTop: "1px solid #D9CFFB",
-              }}>
-                <span style={{ color: theme.purpleDeep }}>Total</span>
-                <span style={{ color: theme.purple }}>{gh(bundle.price)}</span>
-              </div>
-              <div style={{ fontSize: 11, color: "#999", marginTop: 8 }}>
-                Via {bundle.network === "mtn" ? "MTN Mobile Money" : "Telecel Cash"} · SMS receipt included
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={onClose} style={{
-                padding: "13px 18px", border: "1.5px solid #E8E0FB",
-                borderRadius: 12, background: "#fff",
-                color: "#666", fontSize: 14, cursor: "pointer",
-              }}>
-                Cancel
-              </button>
-              <button onClick={handleBuy} disabled={loading} style={{
-                flex: 1, padding: "13px 0",
-                background: loading
-                  ? "#C4B5F4"
-                  : `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
-                border: "none", borderRadius: 12, color: "#fff",
-                fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer",
-              }}>
-                {loading ? "Processing…" : `Pay ${gh(bundle.price)}`}
-              </button>
-            </div>
-          </>
         )}
+
+        {/* Summary */}
+        <div style={{
+          background: theme.purpleLight, borderRadius: 14,
+          padding: "14px 18px", marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+            <span style={{ color: "#666" }}>Bundle</span>
+            <span style={{ fontWeight: 600 }}>{bundle.data} — {bundle.validity}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+            <span style={{ color: "#666" }}>Expires in</span>
+            <span style={{ fontWeight: 600 }}>{bundle.expiry || "90 days"}</span>
+          </div>
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            fontSize: 16, fontWeight: 800, marginTop: 8,
+            paddingTop: 8, borderTop: "1px solid #D9CFFB",
+          }}>
+            <span style={{ color: theme.purpleDeep }}>Total</span>
+            <span style={{ color: theme.purple }}>{gh(bundle.price)}</span>
+          </div>
+          <div style={{ fontSize: 11, color: "#999", marginTop: 8 }}>
+            Secure payment via Paystack
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{
+            padding: "13px 18px", border: "1.5px solid #E8E0FB",
+            borderRadius: 12, background: "#fff",
+            color: "#666", fontSize: 14, cursor: "pointer",
+          }}>
+            Cancel
+          </button>
+          <button onClick={handleBuy} disabled={loading} style={{
+            flex: 1, padding: "13px 0",
+            background: loading
+              ? "#C4B5F4"
+              : `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
+            border: "none", borderRadius: 12, color: "#fff",
+            fontSize: 15, fontWeight: 700,
+            cursor: loading ? "default" : "pointer",
+          }}>
+            {loading ? "Redirecting…" : `Pay ${gh(bundle.price)}`}
+          </button>
+        </div>
       </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+}
+
+// ── Payment Callback Page ─────────────────────────────────────────────────────
+function PaymentCallback() {
+  const [status, setStatus] = useState("checking");
+  const reference =
+    new URLSearchParams(window.location.search).get("reference") ||
+    new URLSearchParams(window.location.search).get("trxref");
+
+  useEffect(() => {
+    if (!reference) { setStatus("error"); return; }
+    const check = async () => {
+      try {
+        const { data } = await axios.get(`${API}/api/orders/${reference}`);
+        setStatus(data.order.status);
+      } catch (_) {
+        setStatus("error");
+      }
+    };
+    check();
+    const interval = setInterval(check, 3000);
+    setTimeout(() => clearInterval(interval), 60000);
+    return () => clearInterval(interval);
+  }, [reference]);
+
+  const icons = {
+    delivered: "✅", paid: "✅",
+    pending: "⏳", failed: "❌", error: "❌", checking: "⏳",
+  };
+
+  const messages = {
+    delivered: "Payment successful! Your bundle has been delivered.",
+    paid:      "Payment confirmed! Bundle delivery in progress.",
+    pending:   "Confirming your payment… please wait.",
+    failed:    "Payment failed. Please try again.",
+    error:     "Could not verify payment. Contact support.",
+    checking:  "Checking your payment status…",
+  };
+
+  const isSuccess = ["delivered", "paid"].includes(status);
+  const isFailed  = ["failed", "error"].includes(status);
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#F4F0FF",
+      display: "flex", alignItems: "center",
+      justifyContent: "center", padding: 20,
+      fontFamily: "system-ui, sans-serif",
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 24, padding: "40px 32px",
+        width: "100%", maxWidth: 380, textAlign: "center",
+        boxShadow: "0 8px 40px rgba(108,62,232,0.12)",
+      }}>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>
+          {icons[status]}
+        </div>
+        <div style={{
+          fontSize: 20, fontWeight: 800, marginBottom: 10,
+          color: isSuccess ? "#1A6B45" : isFailed ? "#8B1A1A" : theme.purpleDeep,
+        }}>
+          {isSuccess ? "Payment successful!" : isFailed ? "Payment failed" : "Processing…"}
+        </div>
+        <div style={{ fontSize: 14, color: "#666", lineHeight: 1.7, marginBottom: 24 }}>
+          {messages[status]}
+        </div>
+
+        {reference && (
+          <div style={{
+            background: theme.purpleLight, borderRadius: 10,
+            padding: "8px 16px", fontSize: 12,
+            color: theme.purple, marginBottom: 24,
+            fontFamily: "monospace",
+          }}>
+            Ref: {reference}
+          </div>
+        )}
+
+        <a href="/" style={{
+          display: "block", padding: "13px 0",
+          background: `linear-gradient(135deg, ${theme.purple}, ${theme.purpleDark})`,
+          borderRadius: 12, color: "#fff",
+          fontSize: 15, fontWeight: 700,
+          textDecoration: "none",
+        }}>
+          Back to store
+        </a>
+      </div>
     </div>
   );
 }
@@ -431,14 +422,17 @@ function StoreView({ onBuy }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const visible = bundles.filter((b) => filter === "all" || b.network === filter);
+  const visible = bundles.filter(
+    (b) => filter === "all" || b.network === filter
+  );
 
   return (
     <div>
       {/* Hero */}
       <div style={{
         background: `linear-gradient(135deg, ${theme.purpleDeep}, ${theme.purple})`,
-        borderRadius: 24, padding: "32px 24px", marginBottom: 28, color: "#fff",
+        borderRadius: 24, padding: "32px 24px",
+        marginBottom: 28, color: "#fff",
       }}>
         <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 6 }}>
           Welcome to
@@ -448,7 +442,7 @@ function StoreView({ onBuy }) {
         </div>
         <div style={{ fontSize: 14, opacity: 0.8, lineHeight: 1.6 }}>
           Buy MTN & Telecel data bundles instantly.<br />
-          Pay with Mobile Money — no app needed.
+          Pay securely with Paystack.
         </div>
       </div>
 
@@ -486,13 +480,14 @@ function StoreView({ onBuy }) {
           gap: 14,
         }}>
           {visible.map((b) => {
-            
+            const net = NET[b.network] || {};
             return (
               <div key={b.id} style={{
                 background: "#fff", borderRadius: 20, padding: 18,
                 boxShadow: "0 2px 16px rgba(108,62,232,0.07)",
                 display: "flex", flexDirection: "column", gap: 8,
                 transition: "transform .2s, box-shadow .2s",
+                cursor: "pointer",
               }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = "translateY(-4px)";
@@ -560,7 +555,8 @@ function AdminView({ showToast, adminCreds, onLogout }) {
 
   const addBundle = async () => {
     if (!form.data || !form.validity || !form.price) return;
-    await axios.post(`${API}/api/bundles`,
+    await axios.post(
+      `${API}/api/bundles`,
       { ...form, price: Number(form.price) },
       { headers: authHeaders }
     );
@@ -596,7 +592,7 @@ function AdminView({ showToast, adminCreds, onLogout }) {
       {/* Admin header */}
       <div style={{
         background: `linear-gradient(135deg, ${theme.purpleDeep}, ${theme.purple})`,
-        borderRadius: 24, padding: "24px 24px",
+        borderRadius: 24, padding: "24px",
         marginBottom: 24, color: "#fff",
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
@@ -620,10 +616,10 @@ function AdminView({ showToast, adminCreds, onLogout }) {
         gap: 12, marginBottom: 24,
       }}>
         {[
-          { label: "Total orders",   value: orders.length,                                          icon: "🛒" },
-          { label: "Revenue",        value: gh(revenue),                                            icon: "💰" },
-          { label: "Active bundles", value: bundles.length,                                         icon: "📦" },
-          { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length,    icon: "✅" },
+          { label: "Total orders",   value: orders.length,                                       icon: "🛒" },
+          { label: "Revenue",        value: gh(revenue),                                         icon: "💰" },
+          { label: "Active bundles", value: bundles.length,                                      icon: "📦" },
+          { label: "Delivered",      value: orders.filter(o => o.status === "delivered").length, icon: "✅" },
         ].map(({ label, value, icon }) => (
           <div key={label} style={{
             background: "#fff", borderRadius: 18, padding: "16px 18px",
@@ -772,20 +768,15 @@ function AdminView({ showToast, adminCreds, onLogout }) {
 
 // ── App Shell ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab]             = useState("store");
-  const [buyBundle, setBuyBundle] = useState(null);
-  const [toast, setToast]         = useState({ msg: "", type: "success" });
+  const [tab, setTab]               = useState("store");
+  const [buyBundle, setBuyBundle]   = useState(null);
+  const [toast, setToast]           = useState({ msg: "", type: "success" });
   const [adminCreds, setAdminCreds] = useState(null);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
   const showToast = useCallback((msg, type = "success") => {
     setToast({ msg, type });
   }, []);
-
-  const handleSuccess = useCallback((order) => {
-    setBuyBundle(null);
-    showToast(`✓ ${order.bundle?.data} sent to ${order.recipientPhone}! SMS receipt delivered.`);
-  }, [showToast]);
 
   const handleAdminLogin = (creds) => {
     setAdminCreds(creds);
@@ -806,14 +797,17 @@ export default function App() {
     }
   };
 
+  // Show payment callback page
+  if (window.location.pathname === "/payment/callback") {
+    return <PaymentCallback />;
+  }
+
   if (showAdminLogin) {
     return <AdminLogin onLogin={handleAdminLogin} />;
   }
 
   return (
     <div style={{ background: "#F4F0FF", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-
-      {/* Nav */}
       <nav style={{
         background: "#fff", padding: "14px 20px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -833,7 +827,6 @@ export default function App() {
             border: "none",
             background: tab === "store" ? theme.purpleLight : "transparent",
             color: tab === "store" ? theme.purple : "#888",
-            transition: "all .2s",
           }}>
             Store
           </button>
@@ -843,14 +836,12 @@ export default function App() {
             border: "none",
             background: tab === "admin" ? theme.purpleLight : "transparent",
             color: tab === "admin" ? theme.purple : "#888",
-            transition: "all .2s",
           }}>
             Admin
           </button>
         </div>
       </nav>
 
-      {/* Content */}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
         {tab === "store" && <StoreView onBuy={setBuyBundle} />}
         {tab === "admin" && adminCreds && (
@@ -866,7 +857,6 @@ export default function App() {
         <BuyModal
           bundle={buyBundle}
           onClose={() => setBuyBundle(null)}
-          onSuccess={handleSuccess}
         />
       )}
 

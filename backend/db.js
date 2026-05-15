@@ -1,12 +1,12 @@
 const bundles = [
-  { id: 'b1', network: 'telecel', data: '500MB', validity: '1 day',   price: 3  },
-  { id: 'b2', network: 'telecel', data: '1GB',   validity: '3 days',  price: 5  },
-  { id: 'b3', network: 'telecel', data: '2GB',   validity: '7 days',  price: 10 },
-  { id: 'b4', network: 'telecel', data: '5GB',   validity: '30 days', price: 25 },
-  { id: 'b5', network: 'mtn',     data: '1GB',   validity: '1 day',   price: 4  },
-  { id: 'b6', network: 'mtn',     data: '3GB',   validity: '7 days',  price: 15 },
-  { id: 'b7', network: 'mtn',     data: '6GB',   validity: '30 days', price: 30 },
-  { id: 'b8', network: 'mtn',     data: '10GB',  validity: '30 days', price: 50 },
+  { id: 'b1', network: 'telecel', data: '500MB', validity: '1 day',   expiry: '90 days', price: 3  },
+  { id: 'b2', network: 'telecel', data: '1GB',   validity: '3 days',  expiry: '90 days', price: 5  },
+  { id: 'b3', network: 'telecel', data: '2GB',   validity: '7 days',  expiry: '90 days', price: 10 },
+  { id: 'b4', network: 'telecel', data: '5GB',   validity: '30 days', expiry: '90 days', price: 25 },
+  { id: 'b5', network: 'mtn',     data: '1GB',   validity: '1 day',   expiry: '90 days', price: 4  },
+  { id: 'b6', network: 'mtn',     data: '3GB',   validity: '7 days',  expiry: '90 days', price: 15 },
+  { id: 'b7', network: 'mtn',     data: '6GB',   validity: '30 days', expiry: '90 days', price: 30 },
+  { id: 'b8', network: 'mtn',     data: '10GB',  validity: '30 days', expiry: '90 days', price: 50 },
 ];
 
 const orders = {};

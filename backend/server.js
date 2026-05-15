@@ -8,6 +8,19 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (
+    username === process.env.ADMIN_USERNAME &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ error: 'Invalid username or password' });
+  }
+});
+
 // Health check
 app.get('/', (req, res) => {
   res.json({ message: 'DataFlow GH backend is running' });

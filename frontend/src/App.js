@@ -245,7 +245,7 @@ function BuyModal({ bundle, onClose, onSuccess }) {
     }
   };
 
-  const net = NET[bundle.network] || {};
+
 
   return (
     <div style={{
@@ -486,7 +486,7 @@ function StoreView({ onBuy }) {
           gap: 14,
         }}>
           {visible.map((b) => {
-            const net = NET[b.network] || {};
+            
             return (
               <div key={b.id} style={{
                 background: "#fff", borderRadius: 20, padding: 18,

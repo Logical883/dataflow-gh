@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -26,6 +27,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'DataFlow GH backend is running' });
 });
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Routes (we'll add these next)
 const bundleRoutes = require('./routes/bundles');
 const orderRoutes  = require('./routes/orders');
@@ -34,6 +39,17 @@ const webhookRoutes = require('./routes/webhook');
 app.use('/api/bundles', bundleRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/webhook', webhookRoutes);
+
+// Keep-alive ping every 1 minute
+const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
+setInterval(async () => {
+  try {
+    await axios.get(`${BACKEND_URL}/health`);
+    console.log('[KEEP-ALIVE] Server pinged successfully');
+  } catch (err) {
+    console.error('[KEEP-ALIVE] Ping failed:', err.message);
+  }
+}, 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

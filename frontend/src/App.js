@@ -365,7 +365,6 @@ function BuyModal({ bundle, onClose, dm }) {
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
   const palette = dm ? dark : light;
-  const net = bundle.network === "mtn" ? T.mtn : T.tel;
 
   const handleBuy = async () => {
     if (!recipientPhone || !payerEmail) { setError("Please fill in all fields."); return; }
@@ -620,7 +619,6 @@ function StoreView({ onBuy, dm }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))", gap: 12 }}>
           {visible.map((b, i) => {
-            const net = b.network === "mtn" ? T.mtn : T.tel;
             return (
               <div key={b.id} className="bundle-card" style={{
                 background: palette.surface, borderRadius: 16, padding: "20px 18px",

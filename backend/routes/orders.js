@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
-  const bundle = db.getBundle(bundleId);
+  const bundle = await db.getBundle(bundleId);
   if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
 
   const paystackFee = calcPaystackFee(bundle.price);

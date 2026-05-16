@@ -5,6 +5,8 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
+console.log('[SUPABASE] Connected to:', process.env.SUPABASE_URL ? '✓ ' + process.env.SUPABASE_URL : '✗ missing URL');
+
 // ── Bundles (still in memory — bundles don't need to persist) ─────────────────
 const bundles = [
   { id: 'b1',  network: 'mtn',     data: '1GB',   validity: 'No expiry', price: 6    },

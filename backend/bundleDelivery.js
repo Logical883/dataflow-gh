@@ -37,9 +37,9 @@ async function deliverBundle({ bundleId, network, data, recipientPhone, orderRef
       webhook:   `${process.env.BACKEND_URL}/api/webhook/hubnet`,
     }, {
       headers: {
-        'token':        `Bearer ${process.env.HUBNET_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+  'token': `Bearer ${process.env.HUBNET_API_KEY}`,
+  'Content-Type': 'application/json',
+},
     });
 
     const result = response.data;

@@ -3,74 +3,80 @@ const router = express.Router();
 const crypto = require('crypto');
 const axios = require('axios');
 const db = require('../db');
+const { deliverBundle } = require('../bundleDelivery');
 
-// Send SMS via Paystack's SMS or any Ghana SMS provider
-async function sendSMS(phone, message) {
-  // Using Hubtel SMS API — sign up free at hubtel.com
-  // Replace with your Hubtel credentials in .env
-  if (!process.env.HUBTEL_CLIENT_ID || !process.env.HUBTEL_CLIENT_SECRET) {
-    console.log(`[SMS SIMULATED] To: ${phone} | Message: ${message}`);
-    return;
-  }
-
-  try {
-    await axios.get('https://smsc.hubtel.com/v1/messages/send', {
-      params: {
-        clientsecret: process.env.HUBTEL_CLIENT_SECRET,
-        clientid:     process.env.HUBTEL_CLIENT_ID,
-        from:         'DataFlow',
-        to:           phone,
-        content:      message,
-      },
-    });
-    console.log(`[SMS SENT] To: ${phone}`);
-  } catch (err) {
-    console.error('[SMS ERROR]', err.message);
-  }
-}
-
-router.post('/paystack', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/paystack', express.raw({ type: '*/*' }), async (req, res) => {
   const signature = req.headers['x-paystack-signature'];
+
+  // Convert body to string properly
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body.toString('utf8')
+    : typeof req.body === 'string'
+      ? req.body
+      : JSON.stringify(req.body);
+
   const hash = crypto
     .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-    .update(req.body)
+    .update(rawBody)
     .digest('hex');
 
   if (hash !== signature) {
+    console.log('[WEBHOOK] Invalid signature');
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
+  // Respond immediately so Paystack doesn't retry
   res.sendStatus(200);
 
-  const event = JSON.parse(req.body);
+  const event = JSON.parse(rawBody);
+  console.log('[WEBHOOK] Event received:', event.event, event.data?.reference);
+
   const { reference } = event.data || {};
   if (!reference) return;
 
   const order = db.getOrder(reference);
-  if (!order) return;
+  if (!order) {
+    console.warn('[WEBHOOK] Unknown reference:', reference);
+    return;
+  }
 
   if (event.event === 'charge.success') {
-    db.updateOrder(reference, { status: 'delivered', paidAt: Date.now() });
-    console.log(`✓ Payment confirmed: ${reference}`);
+    db.updateOrder(reference, { status: 'paid', paidAt: Date.now() });
+    console.log('[WEBHOOK] ✓ Payment confirmed:', reference);
 
-    // Send SMS to recipient
-    const smsMessage =
-      `Hello! Your ${order.bundle.data} data bundle (valid for ${order.bundle.validity}) ` +
-      `has been credited to ${order.recipientPhone}. ` +
-      `Bundle expires in ${order.bundle.expiry}. ` +
-      `Thank you for using DataFlow GH!`;
+    try {
+      const result = await deliverBundle({
+        bundleId:       order.bundleId,
+        network:        order.bundle.network,
+        data:           order.bundle.data,
+        recipientPhone: order.recipientPhone,
+        orderReference: reference,
+      });
 
-    await sendSMS(order.recipientPhone, smsMessage);
+      db.updateOrder(reference, {
+        status:    'delivered',
+        delivery:  result,
+        updatedAt: Date.now(),
+      });
+      console.log('[DELIVERY] ✓ Bundle delivered for', reference);
 
-    // TODO: call your reseller API here to push the actual bundle
+    } catch (err) {
+      db.updateOrder(reference, {
+        status:        'delivery_failed',
+        deliveryError: err.message,
+        updatedAt:     Date.now(),
+      });
+      console.error('[DELIVERY] ✗ Failed for', reference, ':', err.message);
+    }
   }
 
   if (event.event === 'charge.failed') {
     db.updateOrder(reference, {
-      status: 'failed',
+      status:     'failed',
       failReason: event.data.gateway_response,
+      updatedAt:  Date.now(),
     });
-    console.log(`✗ Payment failed: ${reference}`);
+    console.log('[WEBHOOK] ✗ Payment failed:', reference);
   }
 });
 

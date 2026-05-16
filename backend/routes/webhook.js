@@ -1,14 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const axios = require('axios');
 const db = require('../db');
 const { deliverBundle } = require('../bundleDelivery');
 
 router.post('/paystack', express.raw({ type: '*/*' }), async (req, res) => {
   const signature = req.headers['x-paystack-signature'];
 
-  // Convert body to string properly
   const rawBody = Buffer.isBuffer(req.body)
     ? req.body.toString('utf8')
     : typeof req.body === 'string'
@@ -25,7 +23,6 @@ router.post('/paystack', express.raw({ type: '*/*' }), async (req, res) => {
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
-  // Respond immediately so Paystack doesn't retry
   res.sendStatus(200);
 
   const event = JSON.parse(rawBody);
@@ -34,14 +31,14 @@ router.post('/paystack', express.raw({ type: '*/*' }), async (req, res) => {
   const { reference } = event.data || {};
   if (!reference) return;
 
-  const order = db.getOrder(reference);
+  const order = await db.getOrder(reference);
   if (!order) {
     console.warn('[WEBHOOK] Unknown reference:', reference);
     return;
   }
 
   if (event.event === 'charge.success') {
-    db.updateOrder(reference, { status: 'paid', paidAt: Date.now() });
+    await db.updateOrder(reference, { status: 'paid', paidAt: Date.now() });
     console.log('[WEBHOOK] ✓ Payment confirmed:', reference);
 
     try {
@@ -53,28 +50,25 @@ router.post('/paystack', express.raw({ type: '*/*' }), async (req, res) => {
         orderReference: reference,
       });
 
-      db.updateOrder(reference, {
-        status:    'delivered',
-        delivery:  result,
-        updatedAt: Date.now(),
+      await db.updateOrder(reference, {
+        status:   'delivered',
+        delivery: result,
       });
       console.log('[DELIVERY] ✓ Bundle delivered for', reference);
 
     } catch (err) {
-      db.updateOrder(reference, {
+      await db.updateOrder(reference, {
         status:        'delivery_failed',
         deliveryError: err.message,
-        updatedAt:     Date.now(),
       });
       console.error('[DELIVERY] ✗ Failed for', reference, ':', err.message);
     }
   }
 
   if (event.event === 'charge.failed') {
-    db.updateOrder(reference, {
+    await db.updateOrder(reference, {
       status:     'failed',
       failReason: event.data.gateway_response,
-      updatedAt:  Date.now(),
     });
     console.log('[WEBHOOK] ✗ Payment failed:', reference);
   }

@@ -4,10 +4,14 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const db = require('../db');
 
-// ── POST /api/orders ──────────────────────────────────────────────────────────
+function calcPaystackFee(amountGHS) {
+  const fee = (amountGHS * 0.015) + 0.50;
+  return Math.min(parseFloat(fee.toFixed(2)), 2.00);
+}
+
+// POST /api/orders
 router.post('/', async (req, res) => {
   const { bundleId, recipientPhone, payerEmail } = req.body;
-
   if (!bundleId || !recipientPhone || !payerEmail) {
     return res.status(400).json({ error: 'All fields are required' });
   }
@@ -15,30 +19,19 @@ router.post('/', async (req, res) => {
   const bundle = db.getBundle(bundleId);
   if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
 
+  const paystackFee = calcPaystackFee(bundle.price);
+  const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
   const reference   = 'DF-' + uuidv4().slice(0, 10).toUpperCase();
 
-  // Add Paystack fee on top so customer covers it
-  // Paystack charges 1.5% + GH₵ 0.50, capped at GH₵ 2.00
-  const paystackFee = Math.min(
-    parseFloat(((bundle.price * 0.015) + 0.50).toFixed(2)),
-    2.00
-  );
-  const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
-
-  db.createOrder({
-    reference,
-    bundleId,
-    bundle,
-    recipientPhone,
-    payerEmail,
-    paystackFee,
-    totalAmount,
-    status:    'pending',
-    createdAt: Date.now(),
+  await db.createOrder({
+    reference, bundleId, bundle,
+    recipientPhone, payerEmail,
+    paystackFee, totalAmount,
+    status: 'pending', createdAt: Date.now(),
   });
 
   try {
-    console.log(`[ORDER] Bundle: GH₵${bundle.price} | Fee: GH₵${paystackFee} | Total: GH₵${totalAmount} | Pesewas: ${Math.round(totalAmount * 100)}`);
+    console.log(`[ORDER] Bundle: GH₵${bundle.price} | Fee: GH₵${paystackFee} | Total: GH₵${totalAmount}`);
 
     const response = await axios.post(
       'https://api.paystack.co/transaction/initialize',
@@ -49,13 +42,11 @@ router.post('/', async (req, res) => {
         reference,
         callback_url: `${process.env.FRONTEND_URL}/payment/callback`,
         metadata: {
-          bundleId,
-          recipientPhone,
+          bundleId, recipientPhone,
           data:        bundle.data,
           network:     bundle.network,
           bundlePrice: bundle.price,
-          paystackFee,
-          totalAmount,
+          paystackFee, totalAmount,
         },
       },
       {
@@ -75,20 +66,21 @@ router.post('/', async (req, res) => {
     });
 
   } catch (err) {
-    db.updateOrder(reference, { status: 'failed' });
+    await db.updateOrder(reference, { status: 'failed' });
     console.error('[PAYSTACK ERROR]', err.response?.data || err.message);
     res.status(502).json({ error: 'Payment initialization failed. Try again.' });
   }
 });
 
-// ── GET /api/orders ───────────────────────────────────────────────────────────
-router.get('/', (req, res) => {
-  res.json({ orders: db.getAllOrders() });
+// GET /api/orders
+router.get('/', async (req, res) => {
+  const orders = await db.getAllOrders();
+  res.json({ orders });
 });
 
-// ── GET /api/orders/:reference ────────────────────────────────────────────────
-router.get('/:reference', (req, res) => {
-  const order = db.getOrder(req.params.reference);
+// GET /api/orders/:reference
+router.get('/:reference', async (req, res) => {
+  const order = await db.getOrder(req.params.reference);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   res.json({ order });
 });

@@ -910,6 +910,19 @@ export default function App() {
         </div>
       </nav>
 
+      {/* Hidden admin access — visit /legacy to reveal */}
+{window.location.pathname === '/legacy' && (
+  <button className="nav-link" onClick={handleAdminTabClick} style={{
+    display: "flex", alignItems: "center", gap: 7,
+    padding: "7px 14px", borderRadius: 8, border: "none",
+    background: tab === "admin" ? T.violetLight : "transparent",
+    color: tab === "admin" ? T.violet : palette.muted,
+    fontSize: 13, fontWeight: tab === "admin" ? 600 : 400, cursor: "pointer",
+  }}>
+    {Icon.dashboard(tab === "admin" ? T.violet : palette.muted, 16)} Dashboard
+  </button>
+)}
+
       {/* Content */}
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>
         {tab === "store" && <StoreView onBuy={setBuyBundle} dm={dm} />}

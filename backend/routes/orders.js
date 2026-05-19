@@ -4,6 +4,17 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const db = require('../db');
 
+function adminAuth(req, res, next) {
+  const { username, password } = req.headers;
+  if (
+    username === process.env.ADMIN_USERNAME &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    return next();
+  }
+  res.status(401).json({ error: 'Unauthorized' });
+}
+
 function calcPaystackFee(amountGHS) {
   const fee = (amountGHS * 0.015) + 0.50;
   return Math.min(parseFloat(fee.toFixed(2)), 2.00);
@@ -72,8 +83,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/orders
-router.get('/', async (req, res) => {
+// GET /api/orders — admin only
+router.get('/', adminAuth, async (req, res) => {
   const orders = await db.getAllOrders();
   res.json({ orders });
 });

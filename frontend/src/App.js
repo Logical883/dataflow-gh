@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
 const API = process.env.REACT_APP_API_URL;
@@ -664,12 +664,15 @@ function AdminView({ showToast, adminCreds, onLogout, dm }) {
   const [form, setForm]       = useState({ network: "telecel", data: "", validity: "No expiry", price: "" });
   const palette = dm ? dark : light;
 
-  const authHeaders = { username: adminCreds.username, password: adminCreds.password };
+  const authHeaders = useMemo(() => ({ 
+  username: adminCreds.username, 
+  password: adminCreds.password 
+}), [adminCreds]);
 
-  const loadAll = useCallback(() => {
+const loadAll = useCallback(() => {
     axios.get(`${API}/api/bundles`).then(r => setBundles(r.data.bundles));
-    axios.get(`${API}/api/orders`).then(r => setOrders(r.data.orders));
-  }, []);
+    axios.get(`${API}/api/orders`, { headers: authHeaders }).then(r => setOrders(r.data.orders));
+  }, [authHeaders]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 

@@ -885,10 +885,9 @@ export default function App() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           {[
-            { key: "store",   label: "Store",     icon: Icon.store },
-            { key: "admin",   label: "Dashboard", icon: Icon.dashboard },
-          ].map(({ key, label, icon }) => (
-            <button key={key} className="nav-link" onClick={key === "admin" ? handleAdminTabClick : () => setTab(key)} style={{
+  { key: "store", label: "Store", icon: Icon.store },
+].map(({ key, label, icon }) => (
+  <button key={key} className="nav-link" onClick={() => setTab(key)} style={{
               display: "flex", alignItems: "center", gap: 7,
               padding: "7px 14px", borderRadius: 8, border: "none",
               background: tab === key ? T.violetLight : "transparent",

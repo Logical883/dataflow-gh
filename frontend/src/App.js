@@ -855,12 +855,17 @@ export default function App() {
   const palette = dm ? dark : light;
 
   const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
-  const handleAdminLogin = (creds) => { setAdminCreds(creds); setShowAdminLogin(false); setTab("admin"); };
+  const handleAdminLogin = (creds) => {
+  setAdminCreds(creds);
+  setShowAdminLogin(false);
+  setTab("admin");
+  window.history.pushState({}, '', '/');
+};
   const handleLogout = () => { setAdminCreds(null); setTab("store"); };
-  const handleAdminTabClick = () => { if (adminCreds) setTab("admin"); else setShowAdminLogin(true); };
 
-  if (window.location.pathname === "/payment/callback") return <PaymentCallback />;
-  if (showAdminLogin) return <AdminLogin onLogin={handleAdminLogin} />;
+if (window.location.pathname === "/payment/callback") return <PaymentCallback />;
+if (window.location.pathname === "/legacy") return <AdminLogin onLogin={handleAdminLogin} />;
+if (showAdminLogin) return <AdminLogin onLogin={handleAdminLogin} />;
 
   return (
     <div style={{ background: palette.bg, minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", transition: "background .3s" }}>
@@ -910,18 +915,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Hidden admin access — visit /legacy to reveal */}
-{window.location.pathname === '/legacy' && (
-  <button className="nav-link" onClick={handleAdminTabClick} style={{
-    display: "flex", alignItems: "center", gap: 7,
-    padding: "7px 14px", borderRadius: 8, border: "none",
-    background: tab === "admin" ? T.violetLight : "transparent",
-    color: tab === "admin" ? T.violet : palette.muted,
-    fontSize: 13, fontWeight: tab === "admin" ? 600 : 400, cursor: "pointer",
-  }}>
-    {Icon.dashboard(tab === "admin" ? T.violet : palette.muted, 16)} Dashboard
-  </button>
-)}
+
 
       {/* Content */}
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "28px 20px" }}>

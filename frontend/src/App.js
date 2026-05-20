@@ -348,12 +348,13 @@ function AdminLogin({ onLogin }) {
   );
 }
 
-
 function BuyModal({ bundle, onClose, dm }) {
   const [recipientPhone, setRecipient] = useState("");
   const [payerEmail, setEmail]         = useState("");
   const [loading, setLoading]          = useState(false);
   const [error, setError]              = useState("");
+  const [phoneError, setPhoneError]    = useState("");
+  const [confirmed, setConfirmed]      = useState(false);
   const palette = dm ? dark : light;
 
   const paystackFee = Math.min(
@@ -362,8 +363,51 @@ function BuyModal({ bundle, onClose, dm }) {
   );
   const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
 
+  // MTN: 024, 054, 055, 059
+  // Telecel: 020, 050
+  const MTN_PREFIXES     = ["024", "054", "055", "059"];
+  const TELECEL_PREFIXES = ["020", "050"];
+
+  const validatePhone = (phone, network) => {
+    const cleaned = phone.replace(/\s/g, "");
+    if (cleaned.length !== 10 || !/^\d{10}$/.test(cleaned)) {
+      return "Please enter a valid 10-digit phone number.";
+    }
+    const prefix = cleaned.slice(0, 3);
+    const isMTN     = MTN_PREFIXES.includes(prefix);
+    const isTelecel = TELECEL_PREFIXES.includes(prefix);
+
+    if (network === "mtn" && isTelecel) {
+      return "This looks like a Telecel number. Please enter an MTN number (024, 054, 055, 059).";
+    }
+    if (network === "telecel" && isMTN) {
+      return "This looks like an MTN number. Please enter a Telecel number (020, 050).";
+    }
+    if (!isMTN && !isTelecel) {
+      return "This number is not recognized as MTN or Telecel. Please check and try again.";
+    }
+    return "";
+  };
+
+  const handlePhoneChange = (val) => {
+    setRecipient(val);
+    setConfirmed(false);
+    if (val.length >= 10) {
+      setPhoneError(validatePhone(val, bundle.network));
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  const handleConfirm = () => {
+    const err = validatePhone(recipientPhone, bundle.network);
+    if (err) { setPhoneError(err); return; }
+    if (!payerEmail) { setError("Please enter your email address."); return; }
+    setError("");
+    setConfirmed(true);
+  };
+
   const handleBuy = async () => {
-    if (!recipientPhone || !payerEmail) { setError("Please fill in all fields."); return; }
     setError(""); setLoading(true);
     try {
       const { data } = await axios.post(`${API}/api/orders`, {
@@ -409,78 +453,164 @@ function BuyModal({ bundle, onClose, dm }) {
         </div>
 
         <div style={{ padding: "20px 24px" }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: palette.muted, marginBottom: 12, letterSpacing: "0.02em", textTransform: "uppercase" }}>
-            Recipient details
-          </div>
 
-          <InputField icon={Icon.phone(palette.muted, 16)} type="tel" placeholder="Recipient phone number" value={recipientPhone} onChange={e => setRecipient(e.target.value)} dm={dm} />
-          <InputField icon={Icon.mail(palette.muted, 16)} type="email" placeholder="Email address for receipt" value={payerEmail} onChange={e => setEmail(e.target.value)} dm={dm} />
-
-          {error && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              background: dm ? "#1F0A0A" : "#FEF2F2",
-              border: `1px solid ${dm ? "#7F1D1D" : "#FECACA"}`,
-              color: dm ? "#FCA5A5" : "#991B1B",
-              borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14,
-            }}>
-              {Icon.x(dm ? "#FCA5A5" : "#991B1B", 14)} {error}
-            </div>
-          )}
-
-          {/* Summary */}
-          <div style={{
-            background: palette.subtle, borderRadius: 12,
-            padding: "14px 16px", marginBottom: 20,
-            border: `1px solid ${palette.border}`,
-          }}>
-            {[
-              ["Bundle",         bundle.data],
-              ["Network",        bundle.network === "mtn" ? "MTN" : "Telecel"],
-              ["Validity",       bundle.validity || "No expiry"],
-              ["Bundle price",   gh(bundle.price)],
-              ["Processing fee", `+ ${gh(paystackFee)}`],
-            ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-                <span style={{ color: palette.muted }}>{k}</span>
-                <span style={{ fontWeight: 600, color: palette.text }}>{v}</span>
+          {!confirmed ? (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, color: palette.muted, marginBottom: 12, letterSpacing: "0.02em", textTransform: "uppercase" }}>
+                Recipient details
               </div>
-            ))}
-            <div style={{
-              borderTop: `1px solid ${palette.border}`, paddingTop: 10,
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-            }}>
-              <span style={{ fontSize: 13, color: palette.muted }}>Total</span>
-              <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
-                {gh(totalAmount)}
-              </span>
-            </div>
-            <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: palette.muted }}>
-              {Icon.shield(palette.muted, 12)} Secured by Paystack · No expiry on bundle
-            </div>
-          </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={onClose} style={{
-              padding: "12px 20px", border: `1.5px solid ${palette.border}`,
-              borderRadius: 10, background: "transparent", color: palette.muted,
-              fontSize: 14, fontWeight: 600, cursor: "pointer",
-            }}>
-              Cancel
-            </button>
-            <button onClick={handleBuy} disabled={loading} style={{
-              flex: 1, padding: "12px 0",
-              background: loading ? (dm ? "#3B1D8A" : "#7C3AED") : "linear-gradient(135deg, #5B21B6, #7C3AED)",
-              border: "none", borderRadius: 10, color: "#fff",
-              fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}>
-              {loading
-                ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
-                : <>{Icon.arrow("#fff", 16)} Pay {gh(totalAmount)}</>
-              }
-            </button>
-          </div>
+              <InputField
+                icon={Icon.phone(palette.muted, 16)}
+                type="tel"
+                placeholder={bundle.network === "mtn" ? "MTN number (024, 054, 055, 059)" : "Telecel number (020, 050)"}
+                value={recipientPhone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                dm={dm}
+              />
+
+              {/* Phone validation error */}
+              {phoneError && (
+                <div style={{
+                  display: "flex", alignItems: "flex-start", gap: 8,
+                  background: dm ? "#1F0A0A" : "#FEF2F2",
+                  border: `1px solid ${dm ? "#7F1D1D" : "#FECACA"}`,
+                  color: dm ? "#FCA5A5" : "#991B1B",
+                  borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14,
+                }}>
+                  {Icon.x(dm ? "#FCA5A5" : "#991B1B", 14)}
+                  <span>{phoneError}</span>
+                </div>
+              )}
+
+              <InputField
+                icon={Icon.mail(palette.muted, 16)}
+                type="email"
+                placeholder="Email address for receipt"
+                value={payerEmail}
+                onChange={e => setEmail(e.target.value)}
+                dm={dm}
+              />
+
+              {error && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: dm ? "#1F0A0A" : "#FEF2F2",
+                  border: `1px solid ${dm ? "#7F1D1D" : "#FECACA"}`,
+                  color: dm ? "#FCA5A5" : "#991B1B",
+                  borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14,
+                }}>
+                  {Icon.x(dm ? "#FCA5A5" : "#991B1B", 14)} {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={onClose} style={{
+                  padding: "12px 20px", border: `1.5px solid ${palette.border}`,
+                  borderRadius: 10, background: "transparent", color: palette.muted,
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}>
+                  Cancel
+                </button>
+                <button onClick={handleConfirm} disabled={!!phoneError || !recipientPhone} style={{
+                  flex: 1, padding: "12px 0",
+                  background: (phoneError || !recipientPhone)
+                    ? (dm ? "#2D1B6B" : "#C4B5F4")
+                    : `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                  border: "none", borderRadius: 10, color: "#fff",
+                  fontSize: 14, fontWeight: 600,
+                  cursor: (phoneError || !recipientPhone) ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
+                  {Icon.check("#fff", 16)} Confirm details
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Confirmation screen */}
+              <div style={{ fontSize: 13, fontWeight: 600, color: palette.muted, marginBottom: 16, letterSpacing: "0.02em", textTransform: "uppercase" }}>
+                Confirm your order
+              </div>
+
+              {/* Order summary card */}
+              <div style={{
+                background: palette.subtle, borderRadius: 14,
+                border: `1px solid ${palette.border}`, marginBottom: 20, overflow: "hidden",
+              }}>
+                {[
+                  ["Bundle",          bundle.data],
+                  ["Network",         bundle.network === "mtn" ? "MTN" : "Telecel"],
+                  ["Recipient",       recipientPhone],
+                  ["Email",           payerEmail],
+                  ["Validity",        bundle.validity || "No expiry"],
+                  ["Bundle price",    gh(bundle.price)],
+                  ["Processing fee",  `+ ${gh(paystackFee)}`],
+                ].map(([k, v], i, arr) => (
+                  <div key={k} style={{
+                    display: "flex", justifyContent: "space-between",
+                    padding: "10px 16px", fontSize: 13,
+                    borderBottom: i < arr.length - 1 ? `1px solid ${palette.border}` : "none",
+                    background: i % 2 === 0 ? "transparent" : (dm ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)"),
+                  }}>
+                    <span style={{ color: palette.muted }}>{k}</span>
+                    <span style={{ fontWeight: 600, color: palette.text }}>{v}</span>
+                  </div>
+                ))}
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "12px 16px",
+                  background: dm ? "#1E1830" : T.violetLight,
+                  borderTop: `1px solid ${palette.border}`,
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: dm ? "#9B7FF0" : T.violet }}>Total</span>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: T.violet, letterSpacing: "-0.02em" }}>
+                    {gh(totalAmount)}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: palette.muted }}>
+                {Icon.shield(palette.muted, 12)} Secured by Paystack · No expiry on bundle
+              </div>
+
+              {error && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: dm ? "#1F0A0A" : "#FEF2F2",
+                  border: `1px solid ${dm ? "#7F1D1D" : "#FECACA"}`,
+                  color: dm ? "#FCA5A5" : "#991B1B",
+                  borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14,
+                }}>
+                  {Icon.x(dm ? "#FCA5A5" : "#991B1B", 14)} {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setConfirmed(false)} style={{
+                  padding: "12px 20px", border: `1.5px solid ${palette.border}`,
+                  borderRadius: 10, background: "transparent", color: palette.muted,
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}>
+                  Edit
+                </button>
+                <button onClick={handleBuy} disabled={loading} style={{
+                  flex: 1, padding: "12px 0",
+                  background: loading
+                    ? (dm ? "#3B1D8A" : "#7C3AED")
+                    : `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                  border: "none", borderRadius: 10, color: "#fff",
+                  fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
+                  {loading
+                    ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                    : <>{Icon.arrow("#fff", 16)} Pay {gh(totalAmount)}</>
+                  }
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -508,9 +638,18 @@ function PaymentCallback() {
     return () => clearInterval(iv);
   }, [reference]);
 
+  // Auto-redirect to home after 2 seconds on success
+  useEffect(() => {
+    if (["delivered", "paid"].includes(status)) {
+      const timer = setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   const isSuccess = ["delivered", "paid"].includes(status);
   const isFailed  = ["failed", "error"].includes(status);
-  const isPending = ["pending", "checking"].includes(status);
 
   const iconEl = isSuccess
     ? <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#F0FDF4", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.check("#16A34A", 28)}</div>
@@ -523,22 +662,28 @@ function PaymentCallback() {
       <div style={{ background: "#fff", borderRadius: 20, padding: "40px 36px", width: "100%", maxWidth: 400, border: "1px solid #E5E7EB", boxShadow: "0 8px 40px rgba(0,0,0,0.08)", textAlign: "center", animation: "fadeUp .4s ease" }}>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>{iconEl}</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 8 }}>
-          {isSuccess ? "Payment confirmed" : isFailed ? "Payment failed" : "Processing payment"}
+          {isSuccess ? "Payment confirmed!" : isFailed ? "Payment failed" : "Processing payment"}
         </div>
         <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.6, marginBottom: 24 }}>
           {isSuccess
-            ? "Your data bundle has been delivered successfully."
+            ? "Your data bundle is being delivered. Redirecting you back shortly…"
             : isFailed
               ? "Your payment was not completed. No charge was made."
               : "Please wait while we confirm your payment…"}
         </div>
+        {isSuccess && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12, color: T.violet }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.violet, display: "inline-block", animation: "pulse 1s infinite" }} />
+            Redirecting in 2 seconds…
+          </div>
+        )}
         {reference && (
-          <div style={{ background: "#F8F7FF", border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 16px", fontSize: 12, color: "#6B7280", marginBottom: 24, fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ background: "#F8F7FF", border: "1px solid #E5E7EB", borderRadius: 8, padding: "8px 16px", fontSize: 12, color: "#6B7280", margin: "16px 0", fontFamily: "'DM Mono', monospace" }}>
             Ref: {reference}
           </div>
         )}
-        {!isPending && (
-          <a href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 0", background: "linear-gradient(135deg, #5B21B6, #7C3AED)", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
+        {isFailed && (
+          <a href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "13px 0", background: `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`, borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 600, textDecoration: "none" }}>
             {Icon.store("#fff", 16)} Back to store
           </a>
         )}
@@ -928,26 +1073,35 @@ if (showAdminLogin) return <AdminLogin onLogin={handleAdminLogin} />;
         )}
       </div>
 
-      {buyBundle && <BuyModal bundle={buyBundle} onClose={() => setBuyBundle(null)} dm={dm} />}
+{buyBundle && <BuyModal bundle={buyBundle} onClose={() => setBuyBundle(null)} dm={dm} />}
 
       {/* WhatsApp FAB */}
-      <button
-        className="wa-btn"
+      <div
         onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=Hello!%20I%20need%20help%20with%20a%20data%20bundle.`, "_blank")}
         style={{
           position: "fixed", bottom: 24, right: 24, zIndex: 9998,
-          width: 52, height: 52, borderRadius: "50%",
-          background: "#25D366", border: "none", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: "flex", alignItems: "center", gap: 10,
+          background: "#25D366", borderRadius: 30,
+          padding: "12px 18px 12px 14px",
+          cursor: "pointer",
           boxShadow: "0 4px 20px rgba(37,211,102,0.45)",
           transition: "transform .2s ease, box-shadow .2s ease",
         }}
-        onMouseEnter={e => e.currentTarget.style.boxShadow = "0 6px 28px rgba(37,211,102,0.65)"}
-        onMouseLeave={e => e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,211,102,0.45)"}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "scale(1.05)";
+          e.currentTarget.style.boxShadow = "0 6px 28px rgba(37,211,102,0.65)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 4px 20px rgba(37,211,102,0.45)";
+        }}
         title="Chat on WhatsApp"
       >
-        {Icon.wa(24)}
-      </button>
+        {Icon.wa(22)}
+        <span style={{ color: "#fff", fontSize: 13, fontWeight: 600, letterSpacing: "0.01em" }}>
+          Contact Support
+        </span>
+      </div>
 
       <Toast msg={toast.msg} type={toast.type} onDone={() => setToast({ msg: "" })} />
     </div>

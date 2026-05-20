@@ -365,8 +365,8 @@ function BuyModal({ bundle, onClose, dm }) {
 
   // MTN: 024, 054, 055, 059
   // Telecel: 020, 050
-  const MTN_PREFIXES     = ["024", "054", "055", "059"];
-  const TELECEL_PREFIXES = ["020", "050"];
+const MTN_PREFIXES     = ["024", "054", "055", "059", "053", "025"];
+const TELECEL_PREFIXES = ["020", "050"];
 
   const validatePhone = (phone, network) => {
     const cleaned = phone.replace(/\s/g, "");

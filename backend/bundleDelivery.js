@@ -17,7 +17,9 @@ function toHubnetNetwork(network) {
 }
 
 async function deliverBundle({ bundleId, network, data, recipientPhone, orderReference }) {
-  console.log(`[DELIVERY] Sending ${data} to ${recipientPhone} on ${network}`);
+  // Remove all spaces, dashes and special characters from phone number
+const cleanPhone = recipientPhone.replace(/[\s\-\(\)]/g, '');
+console.log(`[DELIVERY] Sending ${data} to ${cleanPhone} on ${network}`);
 
   if (!process.env.HUBNET_API_KEY) {
     console.log(`[DELIVERY] SIMULATED — ${data} sent to ${recipientPhone}`);
@@ -30,7 +32,7 @@ async function deliverBundle({ bundleId, network, data, recipientPhone, orderRef
 
   try {
     const response = await axios.post(endpoint, {
-      phone:     recipientPhone,
+      phone:     cleanPhone,
       volume,
       reference: orderReference.slice(0, 25),
       referrer:  recipientPhone,

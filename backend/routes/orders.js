@@ -30,6 +30,21 @@ router.post('/', async (req, res) => {
   const bundle = await db.getBundle(bundleId);
   if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
 
+  // Validate phone number matches network
+const mtnPrefixes     = ["024", "054", "055", "059", "053", "025"];
+const telecelPrefixes = ["020", "050"];
+const cleanedPhone    = recipientPhone.replace(/[\s\-\(\)]/g, '');
+const prefix          = cleanedPhone.slice(0, 3);
+const isMTN           = mtnPrefixes.includes(prefix);
+const isTelecel       = telecelPrefixes.includes(prefix);
+
+if (bundle.network === "mtn" && !isMTN) {
+  return res.status(400).json({ error: `This appears to be a non-MTN number. Please enter an MTN number (024, 054, 055, 059, 053, 025).` });
+}
+if (bundle.network === "telecel" && !isTelecel) {
+  return res.status(400).json({ error: `This appears to be a non-Telecel number. Please enter a Telecel number (020, 050).` });
+}
+
   const paystackFee = calcPaystackFee(bundle.price);
   const totalAmount = parseFloat((bundle.price + paystackFee).toFixed(2));
   const reference   = 'DF-' + uuidv4().slice(0, 10).toUpperCase();
@@ -97,3 +112,4 @@ router.get('/:reference', async (req, res) => {
 });
 
 module.exports = router;
+

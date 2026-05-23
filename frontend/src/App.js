@@ -5,6 +5,7 @@ const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
 
+
 // ── Google Fonts ──────────────────────────────────────────────────────────────
 const fontLink = document.createElement("link");
 fontLink.href = "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap";
@@ -356,6 +357,7 @@ function BuyModal({ bundle, onClose, dm }) {
   const [phoneError, setPhoneError]    = useState("");
   const [confirmed, setConfirmed]      = useState(false);
   const palette = dm ? dark : light;
+  const [showTelecelWarning, setShowTelecelWarning] = useState(false);
 
   const paystackFee = Math.min(
     parseFloat(((bundle.price * 0.015) + 0.50).toFixed(2)),
@@ -404,7 +406,11 @@ const TELECEL_PREFIXES = ["020", "050"];
     if (err) { setPhoneError(err); return; }
     if (!payerEmail) { setError("Please enter your email address."); return; }
     setError("");
-    setConfirmed(true);
+    if (bundle.network === "telecel") {
+      setShowTelecelWarning(true);
+    } else {
+      setConfirmed(true);
+    }
   };
 
   const handleBuy = async () => {
@@ -453,6 +459,71 @@ const TELECEL_PREFIXES = ["020", "050"];
         </div>
 
         <div style={{ padding: "20px 24px" }}>
+        {/* Telecel network warning */}
+{showTelecelWarning && (
+  <div style={{
+    position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+    backdropFilter: "blur(4px)", zIndex: 600,
+    display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+  }}>
+    <div style={{
+      background: palette.surface, borderRadius: 20, width: "100%", maxWidth: 380,
+      border: `1px solid ${palette.border}`, boxShadow: palette.shadowMd,
+      padding: 28, animation: "fadeUp .25s ease",
+    }}>
+      {/* Warning icon */}
+      <div style={{
+        width: 56, height: 56, borderRadius: "50%",
+        background: "#FFFBEB", border: "1px solid #FDE68A",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        margin: "0 auto 20px",
+      }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+
+      <div style={{ textAlign: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: palette.text, marginBottom: 10 }}>
+          Telecel Network Notice
+        </div>
+        <div style={{ fontSize: 14, color: palette.muted, lineHeight: 1.7 }}>
+          Telecel is currently experiencing network challenges. Your bundle will be delivered, but it may take longer than usual to reflect on your number.
+          <br /><br />
+          Do you wish to continue?
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          onClick={() => setShowTelecelWarning(false)}
+          style={{
+            flex: 1, padding: "12px 0",
+            border: `1.5px solid ${palette.border}`,
+            borderRadius: 10, background: "transparent",
+            color: palette.muted, fontSize: 14,
+            fontWeight: 600, cursor: "pointer",
+          }}
+        >
+          Go back
+        </button>
+        <button
+          onClick={() => { setShowTelecelWarning(false); setConfirmed(true); }}
+          style={{
+            flex: 1, padding: "12px 0",
+            background: `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+            border: "none", borderRadius: 10, color: "#fff",
+            fontSize: 14, fontWeight: 600, cursor: "pointer",
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
           {!confirmed ? (
             <>

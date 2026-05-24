@@ -401,10 +401,9 @@ const TELECEL_PREFIXES = ["020", "050"];
     }
   };
 
-  const handleConfirm = () => {
+const handleConfirm = () => {
     const err = validatePhone(recipientPhone, bundle.network);
     if (err) { setPhoneError(err); return; }
-    if (!payerEmail) { setError("Please enter your email address."); return; }
     setError("");
     if (bundle.network === "telecel") {
       setShowTelecelWarning(true);
@@ -555,13 +554,13 @@ const TELECEL_PREFIXES = ["020", "050"];
               )}
 
               <InputField
-                icon={Icon.mail(palette.muted, 16)}
-                type="email"
-                placeholder="Email address for receipt"
-                value={payerEmail}
-                onChange={e => setEmail(e.target.value)}
-                dm={dm}
-              />
+  icon={Icon.mail(palette.muted, 16)}
+  type="email"
+  placeholder="Email address (optional)"
+  value={payerEmail}
+  onChange={e => setEmail(e.target.value)}
+  dm={dm}
+/>
 
               {error && (
                 <div style={{

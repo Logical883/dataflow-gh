@@ -23,8 +23,8 @@ function calcPaystackFee(amountGHS) {
 // POST /api/orders
 router.post('/', async (req, res) => {
   const { bundleId, recipientPhone, payerEmail } = req.body;
-  if (!bundleId || !recipientPhone || !payerEmail) {
-    return res.status(400).json({ error: 'All fields are required' });
+  if (!bundleId || !recipientPhone) {
+    return res.status(400).json({ error: 'Bundle and recipient number are required' });
   }
 
   const bundle = await db.getBundle(bundleId);
@@ -62,7 +62,7 @@ if (bundle.network === "telecel" && !isTelecel) {
     const response = await axios.post(
       'https://api.paystack.co/transaction/initialize',
       {
-        email:        payerEmail,
+        email: payerEmail || 'yeboahalbert577@gmail.com',
         amount:       Math.round(totalAmount * 100),
         currency:     'GHS',
         reference,

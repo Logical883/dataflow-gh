@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 
 const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
@@ -1165,7 +1165,7 @@ function MaintenancePage() {
         >
           {Icon.wa(22)}
           <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
-            Join our WhatsApp Group for updates
+            WhatsApp Group for updates
           </span>
         </a>
 

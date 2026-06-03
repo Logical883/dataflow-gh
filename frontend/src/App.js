@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
+const MAINTENANCE_MODE = true;
+
 const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
@@ -1060,7 +1062,126 @@ const loadAll = useCallback(() => {
       </div>
     </div>
   );
+  
 }
+
+function MaintenancePage() {
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #2D1B6B 0%, #5B21B6 60%, #7C3AED 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24, fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <div style={{
+        background: "rgba(255,255,255,0.07)",
+        backdropFilter: "blur(20px)",
+        border: "1px solid rgba(255,255,255,0.15)",
+        borderRadius: 24, padding: "48px 36px",
+        width: "100%", maxWidth: 480,
+        textAlign: "center",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+        animation: "fadeUp .5s ease",
+      }}>
+        {/* Logo */}
+        <div style={{
+          width: 64, height: 64, borderRadius: 18,
+          background: "rgba(255,255,255,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 24px",
+        }}>
+          {Icon.wifi("#fff", 28)}
+        </div>
+
+        {/* Brand */}
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", marginBottom: 6 }}>
+          DataFlow GH
+        </div>
+
+        {/* Status badge */}
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 8,
+          background: "rgba(251,191,36,0.15)",
+          border: "1px solid rgba(251,191,36,0.4)",
+          borderRadius: 20, padding: "5px 14px",
+          fontSize: 12, fontWeight: 600, color: "#FCD34D",
+          marginBottom: 28, letterSpacing: "0.04em",
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FCD34D", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+          SCHEDULED MAINTENANCE
+        </div>
+
+        {/* Main message */}
+        <div style={{ fontSize: 26, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.3, marginBottom: 16 }}>
+          We'll be back<br />very soon!
+        </div>
+
+        <div style={{ fontSize: 15, color: "rgba(255,255,255,0.75)", lineHeight: 1.8, marginBottom: 32 }}>
+          We are currently performing scheduled maintenance to improve your experience.
+          We apologize for the inconvenience and appreciate your patience.
+        </div>
+
+        {/* Reassurance box */}
+        <div style={{
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 14, padding: "16px 20px",
+          marginBottom: 32, textAlign: "left",
+          display: "flex", alignItems: "flex-start", gap: 12,
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "rgba(134,239,172,0.15)",
+            border: "1px solid rgba(134,239,172,0.3)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, marginTop: 2,
+          }}>
+            {Icon.check("#86EFAC", 16)}
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#86EFAC", marginBottom: 4 }}>
+              All pending orders are safe
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>
+              If you have an existing order, it will be fulfilled as normal once maintenance is complete. You do not need to take any action.
+            </div>
+          </div>
+        </div>
+
+        {/* WhatsApp group button */}
+        <a
+          href="https://chat.whatsapp.com/Ilc0T37oCIV4zoQFbC4SUB?mode=gi_t"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            background: "#25D366", borderRadius: 12,
+            padding: "14px 0", textDecoration: "none",
+            boxShadow: "0 4px 20px rgba(37,211,102,0.4)",
+            transition: "opacity .2s",
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
+          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+        >
+          {Icon.wa(22)}
+          <span style={{ color: "#fff", fontSize: 14, fontWeight: 600 }}>
+            Join our WhatsApp Group for updates
+          </span>
+        </a>
+
+        <div style={{ marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+          © 2026 Logical Inc · DataFlow GH
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+      `}</style>
+    </div>
+  );
+}
+
 
 // ── App Shell ─────────────────────────────────────────────────────────────────
 export default function App() {
@@ -1071,8 +1192,9 @@ export default function App() {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [dm, setDm]                 = useState(false);
   const palette = dm ? dark : light;
-
   const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
+
+if (MAINTENANCE_MODE) return <MaintenancePage />;
   const handleAdminLogin = (creds) => {
   setAdminCreds(creds);
   setShowAdminLogin(false);

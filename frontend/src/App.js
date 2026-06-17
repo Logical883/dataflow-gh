@@ -1,10 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
-const MAINTENANCE_MODE = false;
+const MAINTENANCE_MODE = true;
 
 const API = process.env.REACT_APP_API_URL;
 const WHATSAPP_NUMBER = "233243426670";
+const MANUAL_PAYMENT = true; // set to false to use Paystack instead
+const MY_PHONE = "0243426670";
+const MY_NAME = "Agyapong Albert Yeboah";
+const MY_WHATSAPP = "233243426670";
 const gh = (n) => `GH₵ ${Number(n).toFixed(2)}`;
 
 
@@ -764,6 +768,349 @@ function PaymentCallback() {
   );
 }
 
+function ManualPayModal({ bundle, onClose, onSuccess }) {
+  const [step, setStep]               = useState(1);
+  const [recipientPhone, setRecipient] = useState("");
+  const [senderName, setSenderName]   = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [momoName, setMomoName]       = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
+  const [copied, setCopied]           = useState(false);
+  const [phoneError, setPhoneError]   = useState("");
+
+  const MTN_PREFIXES     = ["024", "054", "055", "059", "053", "025"];
+  const TELECEL_PREFIXES = ["020", "050"];
+
+  const validatePhone = (phone, network) => {
+    const cleaned = phone.replace(/\s/g, "");
+    if (cleaned.length !== 10 || !/^\d{10}$/.test(cleaned)) return "Please enter a valid 10-digit number.";
+    const prefix = cleaned.slice(0, 3);
+    const isMTN = MTN_PREFIXES.includes(prefix);
+    const isTelecel = TELECEL_PREFIXES.includes(prefix);
+    if (network === "mtn" && isTelecel) return "This looks like a Telecel number. Please enter an MTN number.";
+    if (network === "telecel" && isMTN) return "This looks like an MTN number. Please enter a Telecel number.";
+    if (!isMTN && !isTelecel) return "Number not recognized as MTN or Telecel.";
+    return "";
+  };
+
+  const handlePhoneChange = (val) => {
+    setRecipient(val);
+    if (val.length >= 10) setPhoneError(validatePhone(val, bundle.network));
+    else setPhoneError("");
+  };
+
+  const copyNumber = () => {
+    navigator.clipboard.writeText(MY_PHONE);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSubmit = async () => {
+    if (!recipientPhone || !senderName || !senderPhone || !momoName) {
+      setError("Please fill in all fields."); return;
+    }
+    const err = validatePhone(recipientPhone, bundle.network);
+    if (err) { setError(err); return; }
+    setError(""); setLoading(true);
+    try {
+      const { data } = await axios.post(`${API}/api/orders/manual`, {
+        bundleId: bundle.id, recipientPhone, senderName, senderPhone, momoName,
+      });
+      onSuccess(data.reference);
+    } catch (e) {
+      setError(e.response?.data?.error || "Something went wrong. Try again.");
+    } finally { setLoading(false); }
+  };
+
+  const net = bundle.network === "mtn" ? T.mtn : T.tel;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+      backdropFilter: "blur(4px)", zIndex: 500,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }}>
+      <div style={{
+        background: "#fff", borderRadius: 20, width: "100%", maxWidth: 420,
+        maxHeight: "90vh", overflowY: "auto", animation: "fadeUp .25s ease",
+        boxShadow: "0 16px 60px rgba(0,0,0,0.25)",
+      }}>
+        {/* Header */}
+        <div style={{
+          background: `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+          padding: "20px 24px", borderRadius: "20px 20px 0 0",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+        }}>
+          <div>
+            <Badge network={bundle.network} />
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#fff", letterSpacing: "-0.03em", marginTop: 8, lineHeight: 1 }}>
+              {bundle.data}
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+              {bundle.validity || "No expiry"} · GH₵ {bundle.price}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.15)", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {Icon.x("#fff", 16)}
+          </button>
+        </div>
+
+        <div style={{ padding: "24px" }}>
+
+          {step === 1 && (
+            <>
+              {/* Step 1 — Instructions */}
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                How to pay
+              </div>
+              <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20 }}>
+                Follow these simple steps to complete your purchase
+              </div>
+
+              {/* Steps */}
+              {[
+                {
+                  num: "1",
+                  title: "Copy the number below",
+                  desc: `Send GH₵ ${bundle.price} to this MoMo number`,
+                  action: (
+                    <div style={{ background: "#F3F4F6", borderRadius: 12, padding: "14px 16px", marginTop: 10 }}>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recipient</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", letterSpacing: "0.05em", marginBottom: 2 }}>{MY_PHONE}</div>
+                      <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 12 }}>{MY_NAME}</div>
+                      <button onClick={copyNumber} style={{
+                        width: "100%", padding: "10px 0",
+                        background: copied ? "#166534" : `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                        border: "none", borderRadius: 9, color: "#fff",
+                        fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                        transition: "background .2s",
+                      }}>
+                        {copied ? Icon.check("#fff", 14) : Icon.phone("#fff", 14)}
+                        {copied ? "Copied!" : "Copy number"}
+                      </button>
+                    </div>
+                  ),
+                },
+                {
+                  num: "2",
+                  title: "Use 'Data' as reference",
+                  desc: "When sending the money, type Data as the payment reference/narration",
+                },
+                {
+                  num: "3",
+                  title: "Come back and confirm",
+                  desc: "After sending, click Continue below to fill in your details",
+                },
+              ].map(({ num, title, desc, action }) => (
+                <div key={num} style={{ display: "flex", gap: 14, marginBottom: 20 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                    background: T.violetLight, color: T.violet,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, fontWeight: 700,
+                  }}>
+                    {num}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{title}</div>
+                    <div style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>{desc}</div>
+                    {action}
+                  </div>
+                </div>
+              ))}
+
+              {/* Divider */}
+              <div style={{ borderTop: "1px solid #E5E7EB", margin: "20px 0" }} />
+
+              {/* Need help */}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 12, textAlign: "center" }}>
+                Need help before paying?
+              </div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                <a href={`https://wa.me/${MY_WHATSAPP}?text=Hello!%20I%20want%20to%20buy%20${bundle.data}%20${bundle.network.toUpperCase()}%20bundle%20for%20GH₵${bundle.price}`}
+                  target="_blank" rel="noreferrer" style={{
+                    flex: 1, padding: "11px 0",
+                    background: "#25D366", borderRadius: 10, color: "#fff",
+                    fontSize: 13, fontWeight: 600, textDecoration: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  }}>
+                  {Icon.wa(18)} WhatsApp
+                </a>
+                <a href={`tel:+${MY_WHATSAPP}`} style={{
+                  flex: 1, padding: "11px 0",
+                  background: T.violet, borderRadius: 10, color: "#fff",
+                  fontSize: 13, fontWeight: 600, textDecoration: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                }}>
+                  {Icon.phone("#fff", 16)} Call us
+                </a>
+              </div>
+
+              <button onClick={() => setStep(2)} style={{
+                width: "100%", padding: "13px 0",
+                background: `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                border: "none", borderRadius: 10, color: "#fff",
+                fontSize: 14, fontWeight: 600, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}>
+                {Icon.arrow("#fff", 16)} I have sent the money
+              </button>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {/* Step 2 — Fill details */}
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+                Confirm your payment
+              </div>
+              <div style={{ fontSize: 13, color: "#6B7280", marginBottom: 20 }}>
+                Fill in your details so we can verify and deliver your bundle
+              </div>
+
+              {/* Summary */}
+              <div style={{ background: T.violetLight, borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                  <span style={{ color: "#6B7280" }}>Bundle</span>
+                  <span style={{ fontWeight: 600 }}>{bundle.data} — {bundle.network === "mtn" ? "MTN" : "Telecel"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span style={{ color: "#6B7280" }}>Amount sent</span>
+                  <span style={{ fontWeight: 700, color: T.violet }}>GH₵ {bundle.price}</span>
+                </div>
+              </div>
+
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+                Recipient number (who gets the data)
+              </label>
+              <InputField
+                icon={Icon.phone("#6B7280", 16)}
+                type="tel"
+                placeholder={bundle.network === "mtn" ? "MTN number (024, 054...)" : "Telecel number (020, 050...)"}
+                value={recipientPhone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                dm={false}
+              />
+              {phoneError && (
+                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                  {Icon.x("#991B1B", 13)} {phoneError}
+                </div>
+              )}
+
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+                Your full name
+              </label>
+              <InputField
+                icon={Icon.user("#6B7280", 16)}
+                placeholder="e.g. Kwame Mensah"
+                value={senderName}
+                onChange={e => setSenderName(e.target.value)}
+                dm={false}
+              />
+
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+                Your phone number
+              </label>
+              <InputField
+                icon={Icon.phone("#6B7280", 16)}
+                type="tel"
+                placeholder="e.g. 0241234567"
+                value={senderPhone}
+                onChange={e => setSenderPhone(e.target.value)}
+                dm={false}
+              />
+
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+                MoMo account name (name on your MoMo)
+              </label>
+              <InputField
+                icon={Icon.user("#6B7280", 16)}
+                placeholder="Name registered on your MoMo"
+                value={momoName}
+                onChange={e => setMomoName(e.target.value)}
+                dm={false}
+              />
+
+              {error && (
+                <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#991B1B", borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 14, display: "flex", gap: 8, alignItems: "center" }}>
+                  {Icon.x("#991B1B", 14)} {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setStep(1)} style={{
+                  padding: "12px 20px", border: "1.5px solid #E5E7EB",
+                  borderRadius: 10, background: "#fff", color: "#6B7280",
+                  fontSize: 14, fontWeight: 600, cursor: "pointer",
+                }}>
+                  Back
+                </button>
+                <button onClick={handleSubmit} disabled={loading} style={{
+                  flex: 1, padding: "12px 0",
+                  background: loading ? "#7C3AED" : `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                  border: "none", borderRadius: 10, color: "#fff",
+                  fontSize: 14, fontWeight: 600, cursor: loading ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                }}>
+                  {loading
+                    ? <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                    : <>{Icon.check("#fff", 16)} Submit order</>
+                  }
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              {/* Step 3 — Success */}
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: "50%",
+                  background: "#F0FDF4", border: "1px solid #BBF7D0",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 20px",
+                }}>
+                  {Icon.check("#16A34A", 28)}
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#111827", marginBottom: 10 }}>
+                  Order submitted!
+                </div>
+                <div style={{ fontSize: 14, color: "#6B7280", lineHeight: 1.7, marginBottom: 24 }}>
+                  Your order has been received. We will verify your payment and deliver your {bundle.data} bundle to <strong>{recipientPhone}</strong> shortly.
+                </div>
+                <div style={{ background: T.violetLight, borderRadius: 10, padding: "10px 16px", fontSize: 12, color: T.violet, marginBottom: 24, fontFamily: "'DM Mono', monospace" }}>
+                  If you don't receive your bundle within 10 minutes, contact us on WhatsApp.
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <a href={`https://wa.me/${MY_WHATSAPP}?text=Hello!%20I%20just%20submitted%20an%20order%20for%20${bundle.data}%20bundle.%20My%20name%20is%20${senderName}`}
+                    target="_blank" rel="noreferrer" style={{
+                      flex: 1, padding: "11px 0", background: "#25D366",
+                      borderRadius: 10, color: "#fff", fontSize: 13, fontWeight: 600,
+                      textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    }}>
+                    {Icon.wa(18)} WhatsApp us
+                  </a>
+                  <button onClick={onClose} style={{
+                    flex: 1, padding: "11px 0",
+                    background: `linear-gradient(135deg, ${T.violet}, ${T.violetMid})`,
+                    border: "none", borderRadius: 10, color: "#fff",
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  }}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Store View ────────────────────────────────────────────────────────────────
 function StoreView({ onBuy, dm }) {
   const [bundles, setBundles] = useState([]);
@@ -1037,26 +1384,57 @@ const loadAll = useCallback(() => {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>{["Reference","Bundle","Recipient","Amount","Status"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
+              <tr>{["Reference","Bundle","Recipient","Amount","Status","Action"].map(h => <th key={h} style={thS}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {orders.length === 0 ? (
-                <tr><td colSpan={5} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
-              ) : orders.map(o => (
-                <tr key={o.reference}>
-                  <td style={{ ...tdS, fontFamily: "'DM Mono', monospace", fontSize: 11, color: palette.muted }}>{o.reference}</td>
-                  <td style={tdS}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Badge network={o.bundle?.network} />
-                      <span style={{ fontWeight: 600 }}>{o.bundle?.data}</span>
-                    </div>
-                  </td>
-                  <td style={tdS}>{o.recipientPhone}</td>
-                  <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.bundle?.price || 0)}</td>
-                  <td style={tdS}><StatusBadge status={o.status} /></td>
-                </tr>
-              ))}
-            </tbody>
+  {orders.length === 0 ? (
+    <tr><td colSpan={6} style={{ ...tdS, color: palette.muted, textAlign: "center", padding: 32, borderBottom: "none" }}>No orders yet</td></tr>
+  ) : orders.map(o => (
+    <tr key={o.reference}>
+      <td style={{ ...tdS, fontFamily: "'DM Mono', monospace", fontSize: 11, color: palette.muted }}>{o.reference}</td>
+      <td style={tdS}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Badge network={o.bundle?.network} />
+          <span style={{ fontWeight: 600 }}>{o.bundle?.data}</span>
+        </div>
+      </td>
+      <td style={tdS}>
+        <div>{o.recipientPhone}</div>
+        {o.senderName && <div style={{ fontSize: 11, color: palette.muted, marginTop: 2 }}>{o.senderName} · {o.momoName}</div>}
+      </td>
+      <td style={{ ...tdS, fontWeight: 700, color: T.violet }}>{gh(o.bundle?.price || 0)}</td>
+      <td style={tdS}><StatusBadge status={o.status} /></td>
+      <td style={tdS}>
+        {o.status === "pending_verification" && (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={async () => {
+              await axios.patch(`${API}/api/orders/${o.reference}/status`, { status: "delivered" }, { headers: authHeaders });
+              showToast("Marked as delivered");
+              loadAll();
+            }} style={{
+              padding: "4px 10px", fontSize: 11, fontWeight: 600,
+              background: "#F0FDF4", border: "1px solid #BBF7D0",
+              color: "#166534", borderRadius: 7, cursor: "pointer",
+            }}>
+              ✓ Delivered
+            </button>
+            <button onClick={async () => {
+              await axios.patch(`${API}/api/orders/${o.reference}/status`, { status: "failed" }, { headers: authHeaders });
+              showToast("Marked as failed");
+              loadAll();
+            }} style={{
+              padding: "4px 10px", fontSize: 11, fontWeight: 600,
+              background: "#FEF2F2", border: "1px solid #FECACA",
+              color: "#991B1B", borderRadius: 7, cursor: "pointer",
+            }}>
+              ✗ Failed
+            </button>
+          </div>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
       </div>
@@ -1265,7 +1643,28 @@ if (showAdminLogin) return <AdminLogin onLogin={handleAdminLogin} />;
         )}
       </div>
 
-{buyBundle && <BuyModal bundle={buyBundle} onClose={() => setBuyBundle(null)} dm={dm} />}
+{buyBundle && (
+  MANUAL_PAYMENT ? (
+    <ManualPayModal
+      bundle={buyBundle}
+      onClose={() => setBuyBundle(null)}
+      onSuccess={(reference) => {
+        setBuyBundle(null);
+        showToast("✓ Order submitted! We'll deliver your bundle shortly.");
+      }}
+    />
+  ) : (
+    <BuyModal
+      bundle={buyBundle}
+      onClose={() => setBuyBundle(null)}
+      dm={dm}
+      onSuccess={() => {
+        setBuyBundle(null);
+        showToast("✓ Payment confirmed! Your bundle is being delivered.");
+      }}
+    />
+  )
+)}
 
       {/* WhatsApp FAB */}
       <div

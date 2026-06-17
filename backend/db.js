@@ -55,6 +55,10 @@ module.exports = {
       total_amount:    order.totalAmount || order.bundle?.price || 0,
       status:          order.status || 'pending',
       created_at:      order.createdAt || Date.now(),
+      sender_name:     order.senderName || null,
+      sender_phone:    order.senderPhone || null,
+      momo_name:       order.momoName || null,
+      type:            order.type || 'paystack',
     });
     if (error) console.error('[DB] createOrder error:', error.message);
     return order;

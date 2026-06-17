@@ -111,5 +111,55 @@ router.get('/:reference', async (req, res) => {
   res.json({ order });
 });
 
+// POST /api/orders/manual — customer submits after sending MoMo
+router.post('/manual', async (req, res) => {
+  const { bundleId, recipientPhone, senderName, senderPhone, momoName } = req.body;
+
+  if (!bundleId || !recipientPhone || !senderName || !senderPhone || !momoName) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  const bundle = db.getBundle(bundleId);
+  if (!bundle) return res.status(404).json({ error: 'Bundle not found' });
+
+  const reference = 'MAN-' + uuidv4().slice(0, 10).toUpperCase();
+
+  await db.createOrder({
+    reference,
+    bundleId,
+    bundle,
+    recipientPhone,
+    payerEmail:   `${senderPhone}@manual.com`,
+    senderName,
+    senderPhone,
+    momoName,
+    status:       'pending_verification',
+    type:         'manual',
+    createdAt:    Date.now(),
+  });
+
+  console.log(`[MANUAL ORDER] ${senderName} | ${bundle.data} → ${recipientPhone} | MoMo: ${momoName}`);
+
+  res.json({ reference, success: true });
+});
+
+// PATCH /api/orders/:reference/status — admin updates order status
+router.patch('/:reference/status', async (req, res) => {
+  const { username, password } = req.headers;
+  if (username !== process.env.ADMIN_USERNAME || password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: 'Status is required' });
+
+  const order = await db.getOrder(req.params.reference);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  await db.updateOrder(req.params.reference, { status, updatedAt: Date.now() });
+  console.log(`[ADMIN] Order ${req.params.reference} marked as ${status}`);
+  res.json({ success: true, status });
+});
+
 module.exports = router;
 
